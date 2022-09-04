@@ -14,7 +14,7 @@ void Button::init(int pin){
 }
 
 void Button::refresh(){
-  refreshEdges();
+  refreshEdges(); 
   bool val = digitalRead(this->pin);
 
   if (val != memory){
