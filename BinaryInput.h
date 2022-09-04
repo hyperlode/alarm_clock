@@ -12,7 +12,7 @@ public:
     bool getEdgeDown();
     bool getEdgeUp();
     bool getValueChanged();
-    void refresh();
+    void refreshEdges();
     bool getToggleValue();
     void setToggleValue(bool value);
 

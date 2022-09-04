@@ -27,6 +27,14 @@ void setup() {
 
 void loop() {
   button_time_up.refresh();
+  if (button_time_up.getEdgeDown()){
+    if (button_time_up.getToggleValue()){
+      Serial.println("ON");
+    }else{
+      Serial.println("OFF");
+    }
+  }
+
   
 //  rtc.read();
 //  //*************************Time********************************

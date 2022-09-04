@@ -24,6 +24,7 @@ bool BinaryInput::getValueChanged()
 bool BinaryInput::getToggleValue()
 {
     // toggle is used to mimic a latching button with a momentary button
+    // it will automatically toggle at each edge up. 
     return this->toggleValue;
 }
 
@@ -32,8 +33,12 @@ void BinaryInput::setToggleValue(bool value)
     this->toggleValue = value;
 }
 
-void BinaryInput::refresh()
+void BinaryInput::refreshEdges()
 {
+    if (this->getValueChanged() && this->value)
+    {
+        this->toggleValue = !this->toggleValue;
+    }
     this->previousValue = this->value;
 }
 
@@ -54,7 +59,7 @@ bool BinaryInput::getEdgeUp()
     if (this->getValueChanged() && this->value)
     {
 
-        this->toggleValue = !this->toggleValue;
+        //this->toggleValue = !this->toggleValue;
         return true;
     }
     else
