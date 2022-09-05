@@ -12,6 +12,9 @@
 //#include "WProgram.h"
 //#endif
 
+
+#define DIGITS_COUNT 4
+
 class LedMultiplexer5x8
 {
 
@@ -46,7 +49,7 @@ private:
 
     //Private Variables
     // boolean mode,DigitOn,DigitOff,SegOn,SegOff;
-    byte brightness;
+    uint8_t brightness;
 
     uint32_t test;
     byte DigitPins[5];
@@ -61,6 +64,7 @@ private:
     //byte chars[5];
     // char *text;
     //boolean decPoints[5];
+    void setPinFunction(int pin, bool outputElseInput);
 
     uint8_t boolContainer;
 // #define TEMPDECPOINTMEMORY 0
