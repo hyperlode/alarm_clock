@@ -61,19 +61,22 @@ void setup() {
 
   nextTimeUpdateMillis = millis();
   displayHourMinutesElseMinutesSeconds = true;
-  toggleBrightness(true);
+  cycleBrightness(true);
 }
 
-void toggleBrightness(bool init){
+void cycleBrightness(bool init){
+
+    uint8_t brightness_settings []= {1,4,80,255,0};
     brightness++;
     if (init){
-      brightness = 1;
+      brightness = 3;
     }
     
-    if (brightness>7){
-      brightness = 0; // zero is dark. but, maybe you want that...
+    if (brightness>4){
+      brightness = 0; // zero is dark. but, maybe you want that... e.g. alarm active without display showing.
     }
-    ledDisplay.setBrightness(brightness*brightness*brightness, false);
+    //ledDisplay.setBrightness(brightness*brightness*brightness*brightness, false);
+    ledDisplay.setBrightness(brightness_settings[brightness], false);
 }
 
 void loop() {
@@ -82,12 +85,11 @@ void loop() {
   rtc.read();
 
   if(!button_time_up.getValue()){
-    delay(1);
-    
+    //delay(1);
   }
   
   if (button_time_up.getEdgeDown()){
-    toggleBrightness(false);
+    cycleBrightness(false);
 //    visualsManager.setDecimalPointsToDisplay(0xFF);
     nextTimeUpdateMillis = millis(); // make sure to refresh display
     
@@ -115,12 +117,20 @@ void loop() {
     nextTimeUpdateMillis = millis() + TIME_UPDATE_DELAY;
     if (displayHourMinutesElseMinutesSeconds){
       timeAsNumber = 100 * ((int16_t)rtc.hour)  + (int16_t)rtc.minute;
+      visualsManager.setNumberToDisplay(timeAsNumber,false);
+      if (timeAsNumber < 100){
+        visualsManager.setCharToDisplay('0',1); // leading zero at midnight ("0" hour)
+      }
     }else{
       //timeAsNumber = 100 * ((int16_t)rtc.minute)  + (int16_t)rtc.second;
       timeAsNumber = (int16_t)rtc.second;     
+      visualsManager.setNumberToDisplay(timeAsNumber,false);
+      if (timeAsNumber <10){
+        visualsManager.setCharToDisplay('0',2);  // leading zero if less than ten seconds
+      }
     }
     
-    visualsManager.setNumberToDisplay(timeAsNumber,false);
+    
   }
   
 //  rtc.read();
