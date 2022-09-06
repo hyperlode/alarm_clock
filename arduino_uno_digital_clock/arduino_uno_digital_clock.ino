@@ -25,6 +25,8 @@
 #define PIN_DISPLAY_SEGMENT_G 7 // swapped!
 
 #define PIN_BUTTON_TIME_UP A3
+#define PIN_BUTTON_TIME_DOWN A2
+#define PIN_BUTTON_MENU A1
 #define TIME_UPDATE_DELAY 1000
 
 
@@ -33,6 +35,8 @@ LedMultiplexer5x8 ledDisplay;
 GravityRtc rtc;     //RTC Initialization
 
 Button button_time_up;
+Button button_time_down;
+Button button_menu;
 
 long nextTimeUpdateMillis;
 
@@ -54,7 +58,8 @@ void setup() {
 
 
   button_time_up.init(PIN_BUTTON_TIME_UP);
-
+  button_time_down.init(PIN_BUTTON_TIME_DOWN);
+  button_menu.init(PIN_BUTTON_MENU);
 
   ledDisplay.Begin(DISPLAY_IS_COMMON_ANODE, PIN_DISPLAY_DIGIT_0, PIN_DISPLAY_DIGIT_1, PIN_DISPLAY_DIGIT_2, PIN_DISPLAY_DIGIT_3, PIN_DISPLAY_DIGIT_BUTTON_LIGHTS, PIN_DISPLAY_SEGMENT_A, PIN_DISPLAY_SEGMENT_B, PIN_DISPLAY_SEGMENT_C, PIN_DISPLAY_SEGMENT_D, PIN_DISPLAY_SEGMENT_E, PIN_DISPLAY_SEGMENT_F, PIN_DISPLAY_SEGMENT_G, PIN_DISPLAY_SEGMENT_DP);
   visualsManager.setMultiplexerBuffer(ledDisplay.getDigits());
@@ -66,7 +71,7 @@ void setup() {
 
 void cycleBrightness(bool init){
 
-    uint8_t brightness_settings []= {1,4,80,255,0};
+    uint8_t brightness_settings []= {1,10,80,255,0};
     brightness++;
     if (init){
       brightness = 3;
@@ -82,14 +87,22 @@ void cycleBrightness(bool init){
 void loop() {
   
   button_time_up.refresh();
+  button_time_down.refresh();
+  button_menu.refresh();
+  
   rtc.read();
 
-  if(!button_time_up.getValue()){
-    //delay(1);
+  if(!button_menu.getValue()){
+    delay(10);
+  }
+
+  if (button_time_down.getEdgeDown()){
+    cycleBrightness(false);
+    
   }
   
   if (button_time_up.getEdgeDown()){
-    cycleBrightness(false);
+    
 //    visualsManager.setDecimalPointsToDisplay(0xFF);
     nextTimeUpdateMillis = millis(); // make sure to refresh display
     
