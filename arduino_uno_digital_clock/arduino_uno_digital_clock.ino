@@ -43,6 +43,14 @@ long nextTimeUpdateMillis;
 bool displayHourMinutesElseMinutesSeconds;
 uint8_t brightness;
 
+
+enum clock_state : uint8_t
+{
+    state_display_time = 0,
+    state_set_time
+};
+clock_state clock_state;
+
 void setup() {
   
   Serial.begin(9600);
@@ -67,6 +75,7 @@ void setup() {
   nextTimeUpdateMillis = millis();
   displayHourMinutesElseMinutesSeconds = true;
   cycleBrightness(true);
+  clock_state = state_display_time;
 }
 
 void cycleBrightness(bool init){
@@ -84,41 +93,11 @@ void cycleBrightness(bool init){
     ledDisplay.setBrightness(brightness_settings[brightness], false);
 }
 
-void loop() {
-  
-  button_time_up.refresh();
-  button_time_down.refresh();
-  button_menu.refresh();
-  
-  rtc.read();
 
-  if(!button_menu.getValue()){
-    delay(10);
-  }
 
-  if (button_time_down.getEdgeDown()){
-    cycleBrightness(false);
-    
-  }
-  
-  if (button_time_up.getEdgeDown()){
-    
-//    visualsManager.setDecimalPointsToDisplay(0xFF);
-    nextTimeUpdateMillis = millis(); // make sure to refresh display
-    
-    if (button_time_up.getToggleValue()){
-      Serial.println("seconds minute ON");
-      displayHourMinutesElseMinutesSeconds = false;
-      
-    }else{
-      Serial.println("OFF");
-      displayHourMinutesElseMinutesSeconds = true;
-    }
-  }
-  visualsManager.refresh();
-  ledDisplay.refresh();
-
-  if (millis() > nextTimeUpdateMillis ){
+void display_time(){
+    rtc.read();
+    if (millis() > nextTimeUpdateMillis ){
 
     if (rtc.second % 2){
       visualsManager.setDecimalPointToDisplay(true,1);  
@@ -145,6 +124,60 @@ void loop() {
     
     
   }
+
+    if (button_time_up.getEdgeDown()){
+    
+//    visualsManager.setDecimalPointsToDisplay(0xFF);
+    nextTimeUpdateMillis = millis(); // make sure to refresh display
+    
+    if (button_time_up.getToggleValue()){
+      Serial.println("seconds minute ON");
+      displayHourMinutesElseMinutesSeconds = false;
+      
+    }else{
+      Serial.println("OFF");
+      displayHourMinutesElseMinutesSeconds = true;
+    }
+  }
+
+  if (button_time_down.getEdgeDown()){
+    cycleBrightness(false);
+    
+  }
+  
+}
+void refresh_clock_state(){
+    switch (clock_state)
+    {
+    case state_display_time:
+    {
+      display_time();
+    }
+    break;
+    default:
+    break;
+    }    
+}
+
+
+void loop() {
+  
+  button_time_up.refresh();
+  button_time_down.refresh();
+  button_menu.refresh();
+  
+  refresh_clock_state();
+
+  if(!button_menu.getValue()){
+    delay(10);
+  }
+
+
+  
+
+  visualsManager.refresh();
+  ledDisplay.refresh();
+
   
 //  rtc.read();
 //  //*************************Time********************************
