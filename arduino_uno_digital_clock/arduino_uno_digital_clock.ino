@@ -4,6 +4,7 @@
 #include "DisplayDigitsHandler5Digits.h"
 #include "LedMultiplexer5x8.h"
 
+#define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 2 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
 #define DISPLAY_IS_COMMON_ANODE true //check led displays both displays should be of same type   //also set in SevSeg5Digits.h : MODEISCOMMONANODE
 
 #define PIN_DUMMY 66
@@ -135,13 +136,13 @@ void display_time() {
 
 }
 
-void divider_colon_to_display(){
-  //rtc.read();
+void divider_colon_to_display() {
+  rtc.read();
   if (rtc.second % 2) {
-      visualsManager.setDecimalPointToDisplay(true, 1);
-    } else {
-      visualsManager.setDecimalPointToDisplay(false, 1);
-    }
+    visualsManager.setDecimalPointToDisplay(true, 1);
+  } else {
+    visualsManager.setDecimalPointToDisplay(false, 1);
+  }
 }
 void seconds_to_display() {
   int16_t timeAsNumber;
@@ -187,7 +188,7 @@ void refresh_clock_state() {
 
 
 void loop() {
-
+  delay(DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS);
   button_time_up.refresh();
   button_time_down.refresh();
   button_menu.refresh();
@@ -195,7 +196,7 @@ void loop() {
   refresh_clock_state();
 
   if (!button_menu.getValue()) {
-    delay(10);
+    delay(100);
   }
 
 
