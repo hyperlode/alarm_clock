@@ -52,9 +52,7 @@ enum Time_type :uint8_t
     seconds
 };
 
-// Time_type time_type;
-
-enum clock_stateE : uint8_t
+enum Clock_state : uint8_t
 {
   state_display_time = 0,
   state_set_time_hours,
@@ -62,7 +60,8 @@ enum clock_stateE : uint8_t
   state_set_time_seconds
 
 };
-clock_stateE clock_state;
+
+Clock_state clock_state;
 
 void setup() {
 
@@ -76,7 +75,6 @@ void setup() {
 
   //Set the RTC time manually
   //rtc.adjustRtc(2017,6,19,1,12,7,0);  //Set time: 2017/6/19, Monday, 12:07:00
-
 
   button_time_up.init(PIN_BUTTON_TIME_UP);
   button_time_down.init(PIN_BUTTON_TIME_DOWN);
@@ -120,8 +118,6 @@ void cycleBrightness(bool init) {
   ledDisplay.setBrightness(brightness_settings[brightness], false);
 }
 
-
-
 void display_time() {
 
   if (millis() > nextTimeUpdateMillis ) {
@@ -134,8 +130,6 @@ void display_time() {
     } else {
       seconds_to_display();
     }
-
-
   }
 
   if (button_time_up.getEdgeDown()) {
@@ -155,18 +149,14 @@ void display_time() {
 
   if (button_time_down.getEdgeDown()) {
     cycleBrightness(false);
-
   }
-
 }
 
 void divider_colon_to_display() {
+  // will blink with a two second period
   rtc.read();
-  if (rtc.second % 2) {
-    visualsManager.setDecimalPointToDisplay(true, 1);
-  } else {
-    visualsManager.setDecimalPointToDisplay(false, 1);
-  }
+  visualsManager.setDecimalPointToDisplay(rtc.second % 2, 1);
+  
 }
 void seconds_to_display() {
   int16_t timeAsNumber;
@@ -210,7 +200,6 @@ void set_time(Time_type t) {
 
     divider_colon_to_display();
 
-
     if (t == hours){
         hour_minutes_to_display();
     }else if (t == minutes){
@@ -231,14 +220,8 @@ void set_time(Time_type t) {
             visualsManager.setCharToDisplay(' ', 2);
             visualsManager.setCharToDisplay(' ', 3);
         }
-     
     }
-
-
-
   }
-
-
 }
 
 void refresh_clock_state() {
@@ -270,7 +253,6 @@ void refresh_clock_state() {
   }
 }
 
-
 void loop() {
 
   button_time_up.refresh();
@@ -280,15 +262,9 @@ void loop() {
   refresh_clock_state();
 
   if (button_menu.getEdgeDown()) {
-    //delay(100);
-    clock_state = static_cast<clock_stateE>(static_cast<int>(clock_state) + 1);;
+    clock_state = static_cast<Clock_state>(static_cast<int>(clock_state) + 1);;
     Serial.println(clock_state);
   }
-
-
-
-  //rtc.adjustRtc(2017,6,19,1,12,7,0);  //Set time: 2017/6/19, Monday, 12:07:00
-
 
   visualsManager.refresh();
   ledDisplay.refresh();
