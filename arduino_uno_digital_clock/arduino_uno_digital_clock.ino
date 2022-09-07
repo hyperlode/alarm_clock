@@ -122,15 +122,14 @@ void cycleBrightness(bool init) {
     brightness = DEFAULT_BRIGHTNESS;
   }
 
-  
-
   // enter night mode screen when zero visibility.
   if (brightness == 0){
+    visualsManager.setBlankDisplay();
     Serial.println("dark mode enter.");
     clock_state = state_night_mode;
     brightness = 4;
   }
-    ledDisplay.setBrightness(brightness_settings[brightness], false);
+  ledDisplay.setBrightness(brightness_settings[brightness], false);
   
 }
 
@@ -299,15 +298,16 @@ void display_on_touch_state_refresh(){
     if (button_down.getEdgeDown()){
         Serial.println("back to state display time");
         clock_state = state_display_time;
+        Serial.println(brightness);
     
     }else if (button_menu.getEdgeDown() || button_up.getEdgeDown()){
-        ledDisplay.setBrightness(100, false);
-    }else if (button_menu.getEdgeUp() || button_up.getEdgeUp()){
-        ledDisplay.setBrightness(0, false);
-    } else if (!(button_menu.getValue()) || !(button_up.getValue())){
         divider_colon_to_display();
         hour_minutes_to_display();
-    }else{
+        // ledDisplay.setBrightness(100, false);
+    }else if (button_menu.getEdgeUp() || button_up.getEdgeUp()){
+        // ledDisplay.setBrightness(0, false);
+    // } else if (!(button_menu.getValue()) || !(button_up.getValue())){
+    // }else{
         visualsManager.setBlankDisplay();
     } 
 }
