@@ -200,6 +200,9 @@ void hour_minutes_to_display() {
   visualsManager.setNumberToDisplay(timeAsNumber, false);
   if (timeAsNumber < 100) {
     visualsManager.setCharToDisplay('0', 1); // leading zero at midnight ("0" hour)
+    if(rtc.minute<10){
+        visualsManager.setCharToDisplay('0', 2); // leading zero at midnight for the first nine minutes("0" hour)
+    }
   }
 }
 
