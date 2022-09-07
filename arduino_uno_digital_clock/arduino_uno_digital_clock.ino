@@ -6,7 +6,7 @@
 
 #define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 2 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
 #define DISPLAY_IS_COMMON_ANODE true //check led displays both displays should be of same type   //also set in SevSeg5Digits.h : MODEISCOMMONANODE
-
+#define DEFAULT_BRIGHTNESS 2
 #define PIN_DUMMY 66
 #define PIN_DUMMY_2 22 // randomly chosen. I've had it set to 67, and at some point, multiple segments were lit up. This STILL is C hey, it's gonna chug on forever!
 
@@ -29,6 +29,7 @@
 #define PIN_BUTTON_TIME_DOWN A2
 #define PIN_BUTTON_MENU A1
 #define TIME_UPDATE_DELAY 1000
+#define TIME_HALF_BLINK_PERIOD_MILLIS 250
 
 
 DisplayManagement visualsManager;
@@ -43,19 +44,19 @@ long nextTimeUpdateMillis;
 
 bool displayHourMinutesElseMinutesSeconds;
 uint8_t brightness;
+bool blinker;
 
-
-enum clock_state : uint8_t
+enum clock_stateE : uint8_t
 {
   state_display_time = 0,
   state_set_time
 };
-clock_state clock_state;
+clock_stateE clock_state;
 
 void setup() {
 
   Serial.begin(9600);
-
+  blinker = false;
 
   rtc.setup();
 
@@ -81,15 +82,29 @@ void setup() {
 
 void cycleBrightness(bool init) {
 
-  uint8_t brightness_settings [] = {1, 10, 80, 255, 0};
-  brightness++;
-  if (init) {
-    brightness = 3;
-  }
+  uint8_t brightness_settings [] = {1, 10, 80, 254, 0}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
 
+  //#define CYCLING_GOES_BRIGHTER
+
+#ifdef CYCLING_GOES_BRIGHTER
+  // if cycling goes brighter
+  brightness ++;
   if (brightness > 4) {
     brightness = 0; // zero is dark. but, maybe you want that... e.g. alarm active without display showing.
   }
+#else
+  // cycling goes darker
+  if (brightness == 0) {
+    brightness = 4;
+  } else {
+    brightness--;
+  }
+#endif
+
+  if (init) {
+    brightness = DEFAULT_BRIGHTNESS;
+  }
+
   //ledDisplay.setBrightness(brightness*brightness*brightness*brightness, false);
   ledDisplay.setBrightness(brightness_settings[brightness], false);
 }
@@ -102,8 +117,6 @@ void display_time() {
     nextTimeUpdateMillis = millis() + TIME_UPDATE_DELAY;
 
     divider_colon_to_display();
-
-    int16_t timeAsNumber;
 
     if (displayHourMinutesElseMinutesSeconds) {
       hour_minutes_to_display();
@@ -165,6 +178,43 @@ void hour_minutes_to_display() {
 }
 
 void set_time() {
+  if (button_time_up.getEdgeDown()) {
+    rtc.read();
+    if (rtc.hour == 0) {
+      rtc.hour = 23;
+    } else {
+      rtc.hour --;
+    }
+    rtc.adjustRtc(rtc.year, rtc.month, rtc.day, rtc.week, rtc.hour, rtc.minute, rtc.second);
+  }
+  if (button_time_down.getEdgeDown()) {
+    rtc.read();
+    rtc.hour ++;
+    if (rtc.hour > 23) {
+      rtc.hour = 0;
+    }
+    rtc.adjustRtc(rtc.year, rtc.month, rtc.day, rtc.week, rtc.hour , rtc.minute, rtc.second);
+  }
+
+
+  if (millis() > nextTimeUpdateMillis ) {
+    nextTimeUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
+
+    divider_colon_to_display();
+
+    hour_minutes_to_display();
+    blinker = !blinker;
+
+    if (blinker) {
+
+      visualsManager.setCharToDisplay(' ', 1);
+      visualsManager.setCharToDisplay(' ', 0);
+    }
+
+
+
+  }
+
 
 }
 
@@ -182,28 +232,34 @@ void refresh_clock_state() {
       }
       break;
     default:
+      clock_state = state_display_time;
       break;
   }
 }
 
 
 void loop() {
-  delay(DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS);
+
   button_time_up.refresh();
   button_time_down.refresh();
   button_menu.refresh();
 
   refresh_clock_state();
 
-  if (!button_menu.getValue()) {
-    delay(100);
+  if (button_menu.getEdgeDown()) {
+    //delay(100);
+    clock_state = static_cast<clock_stateE>(static_cast<int>(clock_state) + 1);;
+    Serial.println(clock_state);
   }
 
 
 
+  //rtc.adjustRtc(2017,6,19,1,12,7,0);  //Set time: 2017/6/19, Monday, 12:07:00
+
 
   visualsManager.refresh();
   ledDisplay.refresh();
+  delay(DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS);
 
 
   //  rtc.read();

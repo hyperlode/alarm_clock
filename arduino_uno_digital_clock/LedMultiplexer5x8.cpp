@@ -209,8 +209,8 @@ void LedMultiplexer5x8::refresh()
 //        pinMode(SegmentPins[segment], INPUT);
 //    }
 
-//    PORTD &= 0b00000011;
-//    PORTB &= 0b11000000;
+//    PORTD &= 0b00000011; // output value
+//    PORTB &= 0b11000000;// output value
 
      // DDRD &= 0b00000011; // set relevant pins to input (kind of reset it all). 
      // DDRB &= 0b11000000; // set relevant pins to input (kind of reset it all). 
@@ -234,10 +234,10 @@ void LedMultiplexer5x8::refresh()
     if (segActive > 7)
     {
 //        //this is the brightness control, going into virtual segments, and doing nothing...
-        if (segActive > 7 + this->brightness)
-        {
-            segActive = 0;
-        }
+//        if (segActive > 7 + this->brightness)
+//        {
+//            segActive = 0;
+//        }
         segActive =0;
     }
 
@@ -258,13 +258,13 @@ void LedMultiplexer5x8::refresh()
                 setPinFunction(DigitPins[digit],true);
                 analogWrite(DigitPins[digit],  this->brightness);
                 //digitalWrite(DigitPins[digit], DIGITON);
+            }else{
+              //setPinFunction(DigitPins[digit],false); // doing things one by one causes flickering... (sometimes segment is one while it shouldn't...)
             }
         }
         
     }
     delay(1);
-    
-    //return &segActive; //return the address of the integer that contains the active Segment.
 }
 
 void LedMultiplexer5x8::setBrightness(byte value, bool exponential)
