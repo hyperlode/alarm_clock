@@ -21,4 +21,9 @@ void setBit(uint8_t *bitContainer, bool value, byte index);
 bool getBit(uint8_t *bitContainer, byte index);
 int freeMemory();
 
+bool stepChange(int8_t *counter, int8_t increment, int8_t minValue, int8_t maxValue, bool wrapAround);
+void nextStep(int8_t *counter, bool countUpElseDown, int8_t minValue, int8_t maxValue, bool wrapAround);
+void nextStepRotate(int8_t *counter, bool countUpElseDown, int8_t minValue, int8_t maxValue);
+bool checkBoundaries(int8_t *counter, int8_t minValue, int8_t maxValue, bool rotate);
+
 #endif

@@ -153,6 +153,55 @@ bool getBit(uint8_t *bitContainer, byte index)
     return (*bitContainer >> index) & 1;
 }
 
+
+bool stepChange(int8_t *counter, int8_t increment, int8_t minValue, int8_t maxValue, bool wrapAround)
+{
+    *counter += increment;
+    checkBoundaries(counter, minValue, maxValue, wrapAround);
+    return increment != 0;
+}
+
+void nextStep(int8_t *counter, bool countUpElseDown, int8_t minValue, int8_t maxValue, bool wrapAround)
+{
+    int8_t increment = -1 + (2 * countUpElseDown);
+    stepChange(counter, increment, minValue, maxValue, wrapAround);
+    
+}
+
+void nextStepRotate(int8_t *counter, bool countUpElseDown, int8_t minValue, int8_t maxValue)
+{
+    nextStep(counter, countUpElseDown, minValue, maxValue, true);
+}
+
+bool checkBoundaries(int8_t *counter, int8_t minValue, int8_t maxValue, bool rotate)
+{
+    if (*counter > maxValue)
+    {
+        if (rotate)
+        {
+            *counter = minValue;
+        }
+        else
+        {
+            *counter = maxValue;
+        }
+        return false;
+    }
+    else if (*counter < minValue)
+    {
+        if (rotate)
+        {
+            *counter = maxValue;
+        }
+        else
+        {
+            *counter = minValue;
+        }
+        return false;
+    }
+    return true;
+}
+
 // #ifdef __arm__
 // // should use uinstd.h to define sbrk but Due causes a conflict
 // extern "C" char* sbrk(int incr);

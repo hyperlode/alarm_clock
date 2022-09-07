@@ -45,11 +45,22 @@ long nextTimeUpdateMillis;
 bool displayHourMinutesElseMinutesSeconds;
 uint8_t brightness;
 bool blinker;
+enum Time_type :uint8_t 
+{
+    hours=0,
+    minutes,
+    seconds
+};
+
+// Time_type time_type;
 
 enum clock_stateE : uint8_t
 {
   state_display_time = 0,
-  state_set_time
+  state_set_time_hours,
+  state_set_time_minutes,
+  state_set_time_seconds
+
 };
 clock_stateE clock_state;
 
@@ -177,38 +188,50 @@ void hour_minutes_to_display() {
   }
 }
 
-void set_time() {
-  if (button_time_up.getEdgeDown()) {
+void set_time(Time_type t) {
+
+
+  if (button_time_up.getEdgeDown() || button_time_down.getEdgeDown()) {
     rtc.read();
-    if (rtc.hour == 0) {
-      rtc.hour = 23;
-    } else {
-      rtc.hour --;
+
+    if (t == hours){
+        nextStepRotate(&rtc.hour, button_time_up.getEdgeDown(), 0, 23);
+    }else if (t == minutes){
+        nextStepRotate(&rtc.minute, button_time_up.getEdgeDown(), 0, 59);
+    }else if (t == seconds){
+        //nextStepRotate(&rtc.minute, button_time_up.getEdgeDown(), 0, 59);
+        rtc.second = 0;
     }
     rtc.adjustRtc(rtc.year, rtc.month, rtc.day, rtc.week, rtc.hour, rtc.minute, rtc.second);
   }
-  if (button_time_down.getEdgeDown()) {
-    rtc.read();
-    rtc.hour ++;
-    if (rtc.hour > 23) {
-      rtc.hour = 0;
-    }
-    rtc.adjustRtc(rtc.year, rtc.month, rtc.day, rtc.week, rtc.hour , rtc.minute, rtc.second);
-  }
-
 
   if (millis() > nextTimeUpdateMillis ) {
     nextTimeUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
 
     divider_colon_to_display();
 
-    hour_minutes_to_display();
+
+    if (t == hours){
+        hour_minutes_to_display();
+    }else if (t == minutes){
+        hour_minutes_to_display();
+    }else if (t == seconds){
+        seconds_to_display();
+    }
+     
     blinker = !blinker;
-
     if (blinker) {
-
-      visualsManager.setCharToDisplay(' ', 1);
-      visualsManager.setCharToDisplay(' ', 0);
+        if (t == hours){
+            visualsManager.setCharToDisplay(' ', 1);
+            visualsManager.setCharToDisplay(' ', 0);
+        }else if (t == minutes){
+            visualsManager.setCharToDisplay(' ', 2);
+            visualsManager.setCharToDisplay(' ', 3);
+        }else if (t == seconds){
+            visualsManager.setCharToDisplay(' ', 2);
+            visualsManager.setCharToDisplay(' ', 3);
+        }
+     
     }
 
 
@@ -226,9 +249,19 @@ void refresh_clock_state() {
         display_time();
       }
       break;
-    case state_set_time:
+    case state_set_time_hours:
       {
-        set_time();
+        set_time(hours);
+      }
+      break;
+    case state_set_time_minutes:
+      {
+        set_time(minutes);
+      }
+      break;
+    case state_set_time_seconds:
+      {
+        set_time(seconds);
       }
       break;
     default:
