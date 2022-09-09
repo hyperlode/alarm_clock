@@ -301,7 +301,8 @@ void display_on_touch_state_refresh(){
     if (button_down.getEdgeDown()){
         Serial.println("back to state display time");
         clock_state = state_display_time;
-        Serial.println(brightness);
+        hour_minutes_to_display();
+        // Serial.println(brightness);
     
     }else if (button_menu.getEdgeDown() || button_up.getEdgeDown()){
         divider_colon_to_display();
