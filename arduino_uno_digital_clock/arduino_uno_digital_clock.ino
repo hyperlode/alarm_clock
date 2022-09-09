@@ -3,6 +3,7 @@
 #include "Button.h"
 #include "DisplayDigitsHandler5Digits.h"
 #include "LedMultiplexer5x8.h"
+#include "Buzzer.h"
 
 #define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 2 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
 #define DISPLAY_IS_COMMON_ANODE true //check led displays both displays should be of same type   //also set in SevSeg5Digits.h : MODEISCOMMONANODE
@@ -14,7 +15,7 @@
 #define PIN_DISPLAY_DIGIT_1 10
 #define PIN_DISPLAY_DIGIT_2 9
 #define PIN_DISPLAY_DIGIT_3 6 // swapped!
-#define PIN_DISPLAY_DIGIT_BUTTON_LIGHTS A0
+#define PIN_DISPLAY_DIGIT_BUTTON_LIGHTS PIN_DUMMY
 
 #define PIN_DISPLAY_SEGMENT_A 12
 #define PIN_DISPLAY_SEGMENT_B 8
@@ -25,6 +26,8 @@
 #define PIN_DISPLAY_SEGMENT_DP 4
 #define PIN_DISPLAY_SEGMENT_G 7 // swapped!
 
+
+#define PIN_BUZZER A0
 #define PIN_button_up A3
 #define PIN_button_down A2
 #define PIN_BUTTON_MENU A1
@@ -39,6 +42,8 @@ GravityRtc rtc;     //RTC Initialization
 Button button_up;
 Button button_down;
 Button button_menu;
+
+Buzzer buzzer;
 
 long nextTimeUpdateMillis;
 bool alarm_activated_else_not;
@@ -105,6 +110,8 @@ void setup() {
 
   ledDisplay.Begin(DISPLAY_IS_COMMON_ANODE, PIN_DISPLAY_DIGIT_0, PIN_DISPLAY_DIGIT_1, PIN_DISPLAY_DIGIT_2, PIN_DISPLAY_DIGIT_3, PIN_DISPLAY_DIGIT_BUTTON_LIGHTS, PIN_DISPLAY_SEGMENT_A, PIN_DISPLAY_SEGMENT_B, PIN_DISPLAY_SEGMENT_C, PIN_DISPLAY_SEGMENT_D, PIN_DISPLAY_SEGMENT_E, PIN_DISPLAY_SEGMENT_F, PIN_DISPLAY_SEGMENT_G, PIN_DISPLAY_SEGMENT_DP);
   visualsManager.setMultiplexerBuffer(ledDisplay.getDigits());
+
+  buzzer.setPin(PIN_BUZZER);
 
   nextTimeUpdateMillis = millis();
 //   displayHourMinutesElseMinutesSeconds = true;
@@ -322,7 +329,6 @@ void set_time(Time_type t) {
 
   if (millis() > nextTimeUpdateMillis ) {
     
-            
     nextTimeUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
     rtc.read();
     divider_colon_to_display(rtc.second % 2);
@@ -365,6 +371,8 @@ void alarm_state_refresh(){
         if (button_up.getEdgeDown()){
             alarm_activated_else_not = !alarm_activated_else_not;
             alarm_activated_to_display(alarm_activated_else_not);
+            //buzzer.addRandomSoundToNotesBuffer(0,255);
+            buzzer.addNoteToNotesBuffer(100);
         } 
         if (button_menu.getEdgeDown()){
             alarm_state=state_alarm_set_hours;
@@ -494,16 +502,11 @@ void loop() {
   button_up.refresh();
   button_down.refresh();
   button_menu.refresh();
-
+  buzzer.checkAndPlayNotesBuffer();
   refresh_clock_state();
-
-//   if (button_menu.getEdgeDown()) {
-//     clock_state = static_cast<Clock_state>(static_cast<int>(clock_state) + 1);;
-//     Serial.println(clock_state);
-//   }
-
   visualsManager.refresh();
   ledDisplay.refresh();
+
   delay(DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS);
 
 
