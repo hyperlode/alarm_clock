@@ -41,7 +41,7 @@ Button button_down;
 Button button_menu;
 
 long nextTimeUpdateMillis;
-bool alarm_activate_else_not;
+bool alarm_activated_else_not;
 
 uint8_t alarm_hour;
 uint8_t alarm_minute;
@@ -156,7 +156,8 @@ void display_time_state_refresh() {
 
   if (millis() > nextTimeUpdateMillis ) {
     nextTimeUpdateMillis = millis() + TIME_UPDATE_DELAY;
-    divider_colon_to_display();
+    rtc.read();
+    divider_colon_to_display(rtc.second % 2);
     hour_minutes_to_display();
   }
 
@@ -182,6 +183,7 @@ void display_alarm(){
     timeAsNumber = 100*alarm_hour + alarm_minute;
     visualsManager.setNumberToDisplay(timeAsNumber,false);
     add_leading_zeros(timeAsNumber, false);
+    divider_colon_to_display(true);
 }
 
 void add_leading_zeros(int16_t number, bool leading_zeros_for_most_left_digit){
@@ -202,11 +204,15 @@ void divider_colon_to_display() {
   // will blink with a two second period
   rtc.read();
   visualsManager.setDecimalPointToDisplay(rtc.second % 2, 1);
-  visualsManager.setDecimalPointToDisplay(true, 0);
-//   visualsManager.setDecimalPointToDisplay(true, 2);
-//   visualsManager.setDecimalPointToDisplay(true, 3);
-          
 }
+void divider_colon_to_display(bool active) {
+  visualsManager.setDecimalPointToDisplay(active, 1);
+}
+
+void alarm_activated_to_display(bool active){
+    visualsManager.setDecimalPointToDisplay(active, 0);
+}
+
 void seconds_to_display() {
   int16_t timeAsNumber;
   rtc.read();
@@ -221,17 +227,8 @@ void minutes_seconds_to_display() {
   int16_t timeAsNumber;
   rtc.read();
   timeAsNumber = 100 * ((int16_t)rtc.minute)+ (int16_t)rtc.second;
-  visualsManager.setNumberToDisplay(timeAsNumber, true);
-//   if (timeAsNumber < 1000){
-//     visualsManager.setCharToDisplay('0', 0); // leading zero if less than ten minutes
-//     if (timeAsNumber < 100) {
-//         visualsManager.setCharToDisplay('0', 1); // leading zero if less than ten minutes
-//         if (timeAsNumber < 10) {
-//             visualsManager.setCharToDisplay('0', 2); // leading zero if less than ten seconds
-//         }
-//     }
-    // }
-    add_leading_zeros(timeAsNumber,true);
+  visualsManager.setNumberToDisplay(timeAsNumber, false);
+  add_leading_zeros(timeAsNumber,true);
 }
 
 void hour_minutes_to_display() {
@@ -318,8 +315,8 @@ void set_time(Time_type t) {
     
             
     nextTimeUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
-
-    divider_colon_to_display();
+    rtc.read();
+    divider_colon_to_display(rtc.second % 2);
 
     if (t == hours){
         hour_minutes_to_display();
@@ -357,7 +354,8 @@ void alarm_state_refresh(){
     case state_alarm_display:
     {
         if (button_up.getEdgeDown()){
-            alarm_activate_else_not = !alarm_activate_else_not;
+            alarm_activated_else_not = !alarm_activated_else_not;
+            alarm_activated_to_display(alarm_activated_else_not);
         } 
         if (button_menu.getEdgeDown()){
             alarm_state=state_alarm_set_hours;
@@ -369,16 +367,50 @@ void alarm_state_refresh(){
     break;
     case state_alarm_set_hours:
     {
+        if (button_down.getEdgeDown()){
+            nextStepRotate(&alarm_hour, 0, 0, 23);
+            display_alarm();
+        } 
+        if (button_up.getEdgeDown()){
+            nextStepRotate(&alarm_hour, 1, 0, 23);
+            display_alarm();
+        } 
         if (button_menu.getEdgeDown()){
             alarm_state=state_alarm_set_minutes;
         }
 
+        if (millis() > nextTimeUpdateMillis ) {
+            nextTimeUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
+            display_alarm();
+            blinker =!blinker;
+            if (blinker){
+                visualsManager.setCharToDisplay(' ', 1);
+                visualsManager.setCharToDisplay(' ', 0);
+            }
+        }
     }
     break;
     case state_alarm_set_minutes:
     {
+        if (button_down.getEdgeDown()){
+            nextStepRotate(&alarm_minute, 0, 0, 59);
+            display_alarm();
+        } 
+        if (button_up.getEdgeDown()){
+            nextStepRotate(&alarm_minute, 1, 0, 59);
+            display_alarm();
+        } 
         if (button_menu.getEdgeDown()){
-            alarm_state=state_alarm_end;
+            alarm_state=state_alarm_display;
+        }
+        if (millis() > nextTimeUpdateMillis ) {
+            nextTimeUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
+            display_alarm();
+            blinker =!blinker;
+            if (blinker){
+                visualsManager.setCharToDisplay(' ', 2);
+                visualsManager.setCharToDisplay(' ', 3);
+            }
         }
     }
     break;
@@ -407,7 +439,8 @@ void display_on_touch_state_refresh(){
     
     }else if (button_menu.getEdgeDown() || button_up.getEdgeDown()){
         // press button, time is displayed
-        divider_colon_to_display();
+        rtc.read();
+        divider_colon_to_display(rtc.second % 2);
         hour_minutes_to_display();
         
     }else if (button_menu.getEdgeUp() || button_up.getEdgeUp()){
