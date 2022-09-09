@@ -42,7 +42,7 @@ Button button_menu;
 
 long nextTimeUpdateMillis;
 
-bool displayHourMinutesElseMinutesSeconds;
+// bool displayHourMinutesElseMinutesSeconds;
 uint8_t brightness;
 bool blinker;
 enum Time_type :uint8_t 
@@ -63,10 +63,11 @@ Clock_state clock_state;
 enum Set_time_state: uint8_t 
 {
   state_set_time_init=0,
-  state_set_time_hours=1,
-  state_set_time_minutes=2,
-  state_set_time_seconds=3,
-  state_set_time_end=4
+  state_display_minutes_seconds=1,
+  state_set_time_hours=2,
+  state_set_time_minutes=3,
+  state_set_time_seconds=4,
+  state_set_time_end=5
 };
 Set_time_state set_time_state;
 
@@ -92,7 +93,7 @@ void setup() {
   visualsManager.setMultiplexerBuffer(ledDisplay.getDigits());
 
   nextTimeUpdateMillis = millis();
-  displayHourMinutesElseMinutesSeconds = true;
+//   displayHourMinutesElseMinutesSeconds = true;
   cycleBrightness(true);
   clock_state = state_display_time;
 }
@@ -140,11 +141,11 @@ void display_time_state_refresh() {
 
     divider_colon_to_display();
 
-    if (displayHourMinutesElseMinutesSeconds) {
+    // if (displayHourMinutesElseMinutesSeconds) {
       hour_minutes_to_display();
-    } else {
-      seconds_to_display();
-    }
+    // } else {
+    //   seconds_to_display();
+    // }
   }
 
   if (button_menu.getEdgeDown()) {
@@ -159,14 +160,14 @@ void display_time_state_refresh() {
     //    visualsManager.setDecimalPointsToDisplay(0xFF);
     nextTimeUpdateMillis = millis(); // make sure to refresh display
 
-    if (button_up.getToggleValue()) {
-      Serial.println("seconds minute ON");
-      displayHourMinutesElseMinutesSeconds = false;
+    // if (button_up.getToggleValue()) {
+    //   Serial.println("seconds minute ON");
+    //   displayHourMinutesElseMinutesSeconds = false;
 
-    } else {
-      Serial.println("OFF");
-      displayHourMinutesElseMinutesSeconds = true;
-    }
+    // } else {
+    //   Serial.println("OFF");
+    //   displayHourMinutesElseMinutesSeconds = true;
+    // }
   }
 
   if (button_down.getEdgeDown()) {
@@ -193,6 +194,22 @@ void seconds_to_display() {
   }
 }
 
+void minutes_seconds_to_display() {
+  int16_t timeAsNumber;
+  rtc.read();
+  timeAsNumber = 100 * ((int16_t)rtc.minute)+ (int16_t)rtc.second;
+  visualsManager.setNumberToDisplay(timeAsNumber, false);
+  if (timeAsNumber < 1000){
+    visualsManager.setCharToDisplay('0', 0); // leading zero if less than ten minutes
+    if (timeAsNumber < 100) {
+        visualsManager.setCharToDisplay('0', 1); // leading zero if less than ten minutes
+        if (timeAsNumber < 10) {
+            visualsManager.setCharToDisplay('0', 2); // leading zero if less than ten seconds
+        }
+    }
+  }
+}
+
 void hour_minutes_to_display() {
   int16_t timeAsNumber;
   rtc.read();
@@ -210,8 +227,16 @@ void set_time_state_refresh(){
     switch(set_time_state){
         case state_set_time_init:
         {
-            set_time_state = state_set_time_hours;
+            set_time_state = state_display_minutes_seconds;
             // Serial.println("at time state: INIT");
+        }
+        break;
+        case state_display_minutes_seconds:
+        {
+            minutes_seconds_to_display();
+            if (button_up.getEdgeDown() || button_down.getEdgeDown()) {
+            set_time_state = state_set_time_end;
+            }
         }
         break;
         case state_set_time_hours:
@@ -244,9 +269,8 @@ void set_time_state_refresh(){
     if (button_menu.getEdgeDown()) {
         // cycle trough states in sequence
         set_time_state = static_cast<Set_time_state>(static_cast<int>(set_time_state) + 1);;
-        // clock_state = state_set_time;
-        // set_time_state = state_set_time_hours;
-        
+        // Serial.println("State set to:");
+        // Serial.println(set_time_state);
     }
 }
 
