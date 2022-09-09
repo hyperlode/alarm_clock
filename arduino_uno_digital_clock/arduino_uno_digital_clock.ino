@@ -309,6 +309,15 @@ void set_time(Time_type t) {
         rtc.second = 0;
     }
     rtc.adjustRtc(rtc.year, rtc.month, rtc.day, rtc.week, rtc.hour, rtc.minute, rtc.second);
+    
+    // display updated time here. Even in the "off time" of the blinking process, it will still display the change for the remainder of the off-time. This is good.
+    if (t == hours){
+        hour_minutes_to_display();
+    }else if (t == minutes){
+        hour_minutes_to_display();
+    }else if (t == seconds){
+        seconds_to_display();
+    }
   }
 
   if (millis() > nextTimeUpdateMillis ) {
