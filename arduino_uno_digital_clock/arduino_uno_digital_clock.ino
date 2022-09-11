@@ -11,7 +11,9 @@
 #define PIN_DUMMY 66
 #define PIN_DUMMY_2 22 // randomly chosen. I've had it set to 67, and at some point, multiple segments were lit up. This STILL is C hey, it's gonna chug on forever!
 
-#define PIN_DISPLAY_DIGIT_0 11 // swapped
+// DO NOT USE pin 3 and 11 for PWM if working with tone
+// the common anode pins work with pwm. pwm and tone libraries interfere. 
+#define PIN_DISPLAY_DIGIT_0 5 // swapped
 #define PIN_DISPLAY_DIGIT_1 10
 #define PIN_DISPLAY_DIGIT_2 9
 #define PIN_DISPLAY_DIGIT_3 6 // swapped!
@@ -19,7 +21,7 @@
 
 #define PIN_DISPLAY_SEGMENT_A 12
 #define PIN_DISPLAY_SEGMENT_B 8
-#define PIN_DISPLAY_SEGMENT_C 5
+#define PIN_DISPLAY_SEGMENT_C 11 //swapped
 #define PIN_DISPLAY_SEGMENT_D 3
 #define PIN_DISPLAY_SEGMENT_E 2
 #define PIN_DISPLAY_SEGMENT_F 13 // swapped!
@@ -372,7 +374,19 @@ void alarm_state_refresh(){
             alarm_activated_else_not = !alarm_activated_else_not;
             alarm_activated_to_display(alarm_activated_else_not);
             //buzzer.addRandomSoundToNotesBuffer(0,255);
-            buzzer.addNoteToNotesBuffer(100);
+            if (alarm_activated_else_not){
+                buzzer.addNoteToNotesBuffer(C4_2);
+                buzzer.addNoteToNotesBuffer(REST_4_8);
+                buzzer.addNoteToNotesBuffer(G4_1);
+                buzzer.addNoteToNotesBuffer(G4_1);
+                buzzer.addNoteToNotesBuffer(REST_4_8);
+            }else{
+                buzzer.addNoteToNotesBuffer(G4_2);
+                buzzer.addNoteToNotesBuffer(REST_4_8);
+                buzzer.addNoteToNotesBuffer(C4_1);
+                buzzer.addNoteToNotesBuffer(C4_1);
+                buzzer.addNoteToNotesBuffer(REST_4_8);
+            }
         } 
         if (button_menu.getEdgeDown()){
             alarm_state=state_alarm_set_hours;
@@ -394,6 +408,7 @@ void alarm_state_refresh(){
         } 
         if (button_menu.getEdgeDown()){
             alarm_state=state_alarm_set_minutes;
+            display_alarm();
         }
 
         if (millis() > nextTimeUpdateMillis ) {
@@ -418,6 +433,7 @@ void alarm_state_refresh(){
             display_alarm();
         } 
         if (button_menu.getEdgeDown()){
+            display_alarm();
             alarm_state=state_alarm_display;
         }
         if (millis() > nextTimeUpdateMillis ) {
