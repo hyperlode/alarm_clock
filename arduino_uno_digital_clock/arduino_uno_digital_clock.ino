@@ -19,14 +19,14 @@
 #define PIN_DISPLAY_DIGIT_3 6 // swapped!
 #define PIN_DISPLAY_DIGIT_BUTTON_LIGHTS PIN_DUMMY
 
-#define PIN_DISPLAY_SEGMENT_A 12
+#define PIN_DISPLAY_SEGMENT_A  12
 #define PIN_DISPLAY_SEGMENT_B 8
 #define PIN_DISPLAY_SEGMENT_C 11 //swapped
 #define PIN_DISPLAY_SEGMENT_D 3
 #define PIN_DISPLAY_SEGMENT_E 2
 #define PIN_DISPLAY_SEGMENT_F 13 // swapped!
 #define PIN_DISPLAY_SEGMENT_DP 4
-#define PIN_DISPLAY_SEGMENT_G 7 // swapped!
+#define PIN_DISPLAY_SEGMENT_G  7 // swapped!
 
 #define PIN_BUZZER A0
 #define PIN_button_up A3
@@ -36,6 +36,7 @@
 #define TIME_UPDATE_DELAY 1000
 #define TIME_HALF_BLINK_PERIOD_MILLIS 250
 #define DELAY_ALARM_AUTO_ESCAPE_MILLIS 5000
+#define ALARM_USER_STOP_BUTTON_PRESS_MILLIS 1000
 
 
 DisplayManagement visualsManager;
@@ -50,14 +51,23 @@ Buzzer buzzer;
 
 long nextTimeUpdateMillis;
 long watchdog_last_button_press_millis;
-bool alarm_activated_else_not;
+bool alarm_triggered_memory;
 
 uint8_t alarm_hour;
 uint8_t alarm_minute;
+uint8_t alarm_hour_snooze;
+uint8_t alarm_minute_snooze;
+uint8_t alarm_snooze_duration_minutes;
+uint8_t snooze_count;
+
+// bool alarm_user_toggle_action;
 
 uint8_t brightness;
 bool blinker;
 
+uint8_t hour_now;
+uint8_t minute_now;
+uint8_t second_now;
 
 enum Time_type :uint8_t 
 {
@@ -96,6 +106,19 @@ enum Alarm_state: uint8_t
 };
 Alarm_state alarm_state;
 
+enum Alarm_status_state: uint8_t 
+{
+  state_alarm_status_is_not_enabled=0,
+  state_alarm_status_triggered=1,
+  state_alarm_status_snoozing=2,
+  state_alarm_status_stop=3,
+  state_alarm_status_toggle,
+  state_alarm_status_is_enabled,
+  state_alarm_status_enable,
+  state_alarm_status_disable
+};
+Alarm_status_state alarm_status_state;
+
 void setup() {
 
   Serial.begin(9600);
@@ -123,8 +146,19 @@ void setup() {
   clock_state = state_display_time;
   alarm_state  = state_alarm_init;
 
-  alarm_hour = 7;
-  alarm_minute = 0;
+  rtc.read();
+  alarm_hour = rtc.hour;
+  alarm_minute = rtc.minute + 1;
+  
+//   alarm_hour = 7;
+//   alarm_minute = 0;
+
+
+  alarm_snooze_duration_minutes = 1;
+  snooze_count = 0;
+
+//   alarm_user_toggle_action = false;
+  alarm_status_state = state_alarm_status_is_not_enabled;
 }
 
 void cycleBrightness(bool init) {
@@ -161,32 +195,6 @@ void cycleBrightness(bool init) {
   }
   ledDisplay.setBrightness(brightness_settings[brightness], false);
   
-}
-
-void display_time_state_refresh() {
-
-  if (millis() > nextTimeUpdateMillis ) {
-    nextTimeUpdateMillis = millis() + TIME_UPDATE_DELAY;
-    rtc.read();
-    divider_colon_to_display(rtc.second % 2);
-    hour_minutes_to_display();
-  }
-
-  if (button_menu.getEdgeDown()) {
-    // clock_state = static_cast<Clock_state>(static_cast<int>(clock_state) + 1);;
-    clock_state = state_set_time;
-    //Serial.println("move away from time display state");
-        
-  }
-
-  if (button_up.getEdgeDown()) {
-    //nextTimeUpdateMillis = millis(); // make sure to refresh display
-    clock_state = state_alarm_set;
-  }
-
-  if (button_down.getEdgeDown()) {
-    cycleBrightness(false);
-  }
 }
 
 void display_alarm(){
@@ -256,12 +264,94 @@ void hour_minutes_to_display() {
     add_leading_zeros(timeAsNumber,false);
 }
 
+void set_time(Time_type t) {
+  if (button_up.getEdgeDown() || button_down.getEdgeDown()) {
+    rtc.read();
+
+    if (t == hours){
+        nextStepRotate(&rtc.hour, button_up.getEdgeDown(), 0, 23);
+    }else if (t == minutes){
+        nextStepRotate(&rtc.minute, button_up.getEdgeDown(), 0, 59);
+    }else if (t == seconds){
+        //nextStepRotate(&rtc.minute, button_up.getEdgeDown(), 0, 59);
+        rtc.second = 0;
+    }
+    rtc.adjustRtc(rtc.year, rtc.month, rtc.day, rtc.week, rtc.hour, rtc.minute, rtc.second);
+    
+    // display updated time here. Even in the "off time" of the blinking process, it will still display the change for the remainder of the off-time. This is good.
+    if (t == hours){
+        hour_minutes_to_display();
+    }else if (t == minutes){
+        hour_minutes_to_display();
+    }else if (t == seconds){
+        seconds_to_display();
+    }
+  }
+
+  if (millis() > nextTimeUpdateMillis ) {
+    
+    nextTimeUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
+    rtc.read();
+    divider_colon_to_display(rtc.second % 2);
+
+    if (t == hours){
+        hour_minutes_to_display();
+    }else if (t == minutes){
+        hour_minutes_to_display();
+    }else if (t == seconds){
+        seconds_to_display();
+    }
+     
+    blinker = !blinker;
+    if (blinker) {
+        if (t == hours){
+            visualsManager.setCharToDisplay(' ', 1);
+            visualsManager.setCharToDisplay(' ', 0);
+
+        }else if (t == minutes){
+            visualsManager.setCharToDisplay(' ', 2);
+            visualsManager.setCharToDisplay(' ', 3);
+            
+        }else if (t == seconds){
+            visualsManager.setCharToDisplay(' ', 2);
+            visualsManager.setCharToDisplay(' ', 3);
+        }
+    }
+  }
+}
+
+void display_time_state_refresh() {
+
+  if (millis() > nextTimeUpdateMillis ) {
+    nextTimeUpdateMillis = millis() + TIME_UPDATE_DELAY;
+    rtc.read();
+    hour_now = rtc.hour;
+    minute_now = rtc.minute;
+    second_now = rtc.second;
+    divider_colon_to_display(second_now % 2);
+    hour_minutes_to_display();
+  }
+   
+  if (button_menu.getEdgeDown()) {
+    // clock_state = static_cast<Clock_state>(static_cast<int>(clock_state) + 1);;
+    clock_state = state_set_time;
+
+  }
+
+  if (button_up.getEdgeDown()) {
+    clock_state = state_alarm_set;
+  }
+
+  if (button_down.getEdgeDown()) {
+    cycleBrightness(false);
+  }
+}
+
 void set_time_state_refresh(){
     switch(set_time_state){
         case state_set_time_init:
         {
             set_time_state = state_display_minutes_seconds;
-            // Serial.println("at time state: INIT");
         }
         break;
         case state_display_minutes_seconds:
@@ -307,69 +397,169 @@ void set_time_state_refresh(){
     }
 }
 
-void set_time(Time_type t) {
-  if (button_up.getEdgeDown() || button_down.getEdgeDown()) {
-    rtc.read();
-
-    if (t == hours){
-        nextStepRotate(&rtc.hour, button_up.getEdgeDown(), 0, 23);
-    }else if (t == minutes){
-        nextStepRotate(&rtc.minute, button_up.getEdgeDown(), 0, 59);
-    }else if (t == seconds){
-        //nextStepRotate(&rtc.minute, button_up.getEdgeDown(), 0, 59);
-        rtc.second = 0;
+void alarm_state_refresh(){
+    switch(alarm_status_state){
+    case (state_alarm_status_disable):
+    {
+        // alarm_user_toggle_action = false;  
+        buzzer.addNoteToNotesBuffer(G4_2);
+        buzzer.addNoteToNotesBuffer(REST_4_8);
+        buzzer.addNoteToNotesBuffer(C4_1);
+        buzzer.addNoteToNotesBuffer(C4_1);
+        buzzer.addNoteToNotesBuffer(REST_4_8);
+        alarm_status_state = state_alarm_status_is_not_enabled;
+        alarm_activated_to_display(false);
+        snooze_count = 0;
+        Serial.println("Disable alarm");
+        
     }
-    rtc.adjustRtc(rtc.year, rtc.month, rtc.day, rtc.week, rtc.hour, rtc.minute, rtc.second);
-    
-    // display updated time here. Even in the "off time" of the blinking process, it will still display the change for the remainder of the off-time. This is good.
-    if (t == hours){
-        hour_minutes_to_display();
-    }else if (t == minutes){
-        hour_minutes_to_display();
-    }else if (t == seconds){
-        seconds_to_display();
-    }
-  }
+    break;
 
-  if (millis() > nextTimeUpdateMillis ) {
-    
-    nextTimeUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
-    rtc.read();
-    divider_colon_to_display(rtc.second % 2);
-
-    if (t == hours){
-        hour_minutes_to_display();
-    }else if (t == minutes){
-        hour_minutes_to_display();
-    }else if (t == seconds){
-        seconds_to_display();
+    case (state_alarm_status_enable):
+    {
+        // alarm_user_toggle_action = false;  
+        //buzzer.addRandomSoundToNotesBuffer(0,255);
+        buzzer.addNoteToNotesBuffer(C4_2);
+        buzzer.addNoteToNotesBuffer(REST_4_8);
+        buzzer.addNoteToNotesBuffer(G4_1);
+        buzzer.addNoteToNotesBuffer(G4_1);
+        buzzer.addNoteToNotesBuffer(REST_4_8);
+        alarm_status_state = state_alarm_status_is_enabled;
+        alarm_activated_to_display(true);
+        snooze_count = 0;
+        Serial.println("Enable alarm");
     }
-     
-    blinker = !blinker;
-    if (blinker) {
-        if (t == hours){
-            visualsManager.setCharToDisplay(' ', 1);
-            visualsManager.setCharToDisplay(' ', 0);
-        }else if (t == minutes){
-            visualsManager.setCharToDisplay(' ', 2);
-            visualsManager.setCharToDisplay(' ', 3);
-        }else if (t == seconds){
-            visualsManager.setCharToDisplay(' ', 2);
-            visualsManager.setCharToDisplay(' ', 3);
+    break;
+
+    case (state_alarm_status_is_not_enabled):
+    {
+    }
+    break;
+
+    case (state_alarm_status_is_enabled):
+    {
+        //Serial.println(hour_now);
+        if (hour_now == alarm_hour && minute_now == alarm_minute && second_now == 0){
+            // // make sure there is only one trigger edge at an alarm occurence
+
+            // alarm going off will interrupt ongoing user operations.
+            switch(clock_state){
+                case state_set_time:
+                {
+                    if (set_time_state != state_set_time_hours &&
+                    set_time_state != state_set_time_minutes &&
+                    set_time_state != state_set_time_seconds
+                    ){
+                        set_time_state = state_set_time_init;
+                        clock_state = state_display_time;
+                        alarm_status_state = state_alarm_status_triggered;
+                        Serial.println("alarm triggered...(exit time setting)");
+                    }else{
+                        Serial.println("Do not trigger alarm while setting time");
+                    }
+
+                }
+                break;
+                case state_night_mode:
+                {
+                    alarm_status_state = state_alarm_status_triggered;
+                    
+                }
+                break;
+                case state_alarm_set:
+                {
+                    // dont trigger alarm while setting the alarm time
+                    if (alarm_state != state_alarm_set_hours && alarm_state != state_alarm_set_minutes){
+                        alarm_state = state_alarm_init;
+                        clock_state = state_display_time;
+                        Serial.println("alarm triggered...(exit alarm setting)");
+                        alarm_status_state = state_alarm_status_triggered;
+
+                    }
+                }
+                break;
+                case state_display_time:
+                {
+                        alarm_status_state = state_alarm_status_triggered;
+                  
+                }
+                break;
+                default:
+                {
+                    Serial.println("alarm triggered...");
+
+                }
+                break;
+            }
+             // if alarm is triggered while in a different state, these states should be reset.
+            
+            
+
         }
     }
-  }
+    break;
+
+    case (state_alarm_status_triggered):
+    {
+        if (button_down.getValueChanged() ||
+            button_up.getValueChanged() ||
+            button_menu.getValueChanged() 
+            )
+        {
+            // set snooze time
+            snooze_count ++;
+            long time_stamp_minutes = 60*alarm_hour + alarm_minute;
+            time_stamp_minutes += (alarm_snooze_duration_minutes * snooze_count);
+            time_stamp_minutes %= 24 * 60;
+            alarm_hour_snooze = time_stamp_minutes / 60;
+            alarm_minute_snooze = time_stamp_minutes % 60;
+
+            //alarm_sounding = false;
+            alarm_status_state = state_alarm_status_snoozing;
+        }
+
+        // add notes when buffer empty and alarm ringing
+        if (buzzer.getBuzzerNotesBufferEmpty())
+        {
+            buzzer.addNoteToNotesBuffer(C6_1);
+            buzzer.addNoteToNotesBuffer(REST_2_8);
+        }
+    }
+    break;
+    
+    case (state_alarm_status_snoozing):
+    {
+        if (hour_now == alarm_hour_snooze && minute_now == alarm_minute_snooze && second_now == 0){
+            alarm_status_state = state_alarm_status_triggered;
+        }
+        if (!button_up.getValue() &&
+                millis() >(button_up.getLastStateChangeMillis() +ALARM_USER_STOP_BUTTON_PRESS_MILLIS)
+                )
+        {
+            snooze_count = 0;
+            alarm_status_state = state_alarm_status_disable;
+        }
+
+        alarm_activated_to_display((millis()%500)>250);
+    }
+    break;
+
+    default:
+    {
+    }
+    break;
+    }
 }
 
-void alarm_state_refresh(){
+void alarm_set_state_refresh(){
 
     if (millis() > watchdog_last_button_press_millis + DELAY_ALARM_AUTO_ESCAPE_MILLIS){
         alarm_state = state_alarm_end;
-        Serial.println("yeooie");
-        Serial.println(watchdog_last_button_press_millis);
+        // Serial.println("yeooie");
+        // Serial.println(watchdog_last_button_press_millis);
     }
 
- switch (alarm_state)
+    switch (alarm_state)
   {
     case state_alarm_init:
     {
@@ -380,21 +570,34 @@ void alarm_state_refresh(){
     case state_alarm_display:
     {
         if (button_up.getEdgeDown()){
-            alarm_activated_else_not = !alarm_activated_else_not;
-            alarm_activated_to_display(alarm_activated_else_not);
-            //buzzer.addRandomSoundToNotesBuffer(0,255);
-            if (alarm_activated_else_not){
-                buzzer.addNoteToNotesBuffer(C4_2);
-                buzzer.addNoteToNotesBuffer(REST_4_8);
-                buzzer.addNoteToNotesBuffer(G4_1);
-                buzzer.addNoteToNotesBuffer(G4_1);
-                buzzer.addNoteToNotesBuffer(REST_4_8);
-            }else{
-                buzzer.addNoteToNotesBuffer(G4_2);
-                buzzer.addNoteToNotesBuffer(REST_4_8);
-                buzzer.addNoteToNotesBuffer(C4_1);
-                buzzer.addNoteToNotesBuffer(C4_1);
-                buzzer.addNoteToNotesBuffer(REST_4_8);
+         
+            // state_alarm_status = state_alarm_status_toggle_active;
+            // alarm_user_toggle_action = true;
+
+
+            switch (alarm_status_state){
+                case state_alarm_status_is_not_enabled:
+                {
+                    alarm_status_state = state_alarm_status_enable;
+                }
+                break;
+                
+                case state_alarm_status_is_enabled:
+                {
+                    alarm_status_state = state_alarm_status_disable;
+                }
+                break;
+                case state_alarm_status_snoozing:
+                {
+                    alarm_status_state = state_alarm_status_disable;
+                }
+                break;
+                default:
+                {
+                    Serial.println("ASSERT ERROR: alarm state not expected");
+                }
+                break;
+
             }
         } 
         if (button_menu.getEdgeDown()){
@@ -492,6 +695,10 @@ void display_on_touch_state_refresh(){
 }
 
 void refresh_clock_state() {
+
+  // alarm FSM runs independently
+  alarm_state_refresh();
+
   switch (clock_state)
   {
     case state_display_time:
@@ -511,7 +718,7 @@ void refresh_clock_state() {
     break;
     case state_alarm_set:
     {
-        alarm_state_refresh();
+        alarm_set_state_refresh();
     }
     break;
     default:
@@ -521,6 +728,8 @@ void refresh_clock_state() {
     break;
   }
 }
+
+
 
 void checkWatchDog(){
     if (button_down.getValueChanged() ||
@@ -532,16 +741,32 @@ void checkWatchDog(){
     }
 }
 
+void updateTimeNow(){
+    // limit calls to peripheral by only loading time once every 
+    if (millis() > nextTimeUpdateMillis ) {
+        rtc.read();
+        hour_now = rtc.hour;
+        minute_now = rtc.minute;
+        second_now = rtc.second;
+    }
+}
+
 void loop() {
-  checkWatchDog();
+
+  // input
   button_up.refresh();
   button_down.refresh();
   button_menu.refresh();
-  buzzer.checkAndPlayNotesBuffer();
+
+  // process
+  updateTimeNow();
+  checkWatchDog();
   refresh_clock_state();
+
+  // output
+  buzzer.checkAndPlayNotesBuffer();
   visualsManager.refresh();
   ledDisplay.refresh();
-
   delay(DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS);
 
 

@@ -13,6 +13,11 @@ void Button::init(int pin){
   memory =false;
 }
 
+long Button::getLastStateChangeMillis(){
+    // can be used for long button pressed, check how long a button is in a certain state.
+    return debounce_start;
+}
+
 void Button::refresh(){
   refreshEdges(); 
   bool val = digitalRead(this->pin);

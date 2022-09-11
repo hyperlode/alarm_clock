@@ -18,6 +18,7 @@ class Button: public BinaryInput{
     Button();
     void init(int pin); 
     void refresh();
+    long getLastStateChangeMillis();
     
     
   private:
