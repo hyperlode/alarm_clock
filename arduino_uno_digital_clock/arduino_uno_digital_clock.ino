@@ -28,13 +28,14 @@
 #define PIN_DISPLAY_SEGMENT_DP 4
 #define PIN_DISPLAY_SEGMENT_G 7 // swapped!
 
-
 #define PIN_BUZZER A0
 #define PIN_button_up A3
 #define PIN_button_down A2
 #define PIN_BUTTON_MENU A1
+
 #define TIME_UPDATE_DELAY 1000
 #define TIME_HALF_BLINK_PERIOD_MILLIS 250
+#define DELAY_ALARM_AUTO_ESCAPE_MILLIS 5000
 
 
 DisplayManagement visualsManager;
@@ -48,14 +49,16 @@ Button button_menu;
 Buzzer buzzer;
 
 long nextTimeUpdateMillis;
+long watchdog_last_button_press_millis;
 bool alarm_activated_else_not;
 
 uint8_t alarm_hour;
 uint8_t alarm_minute;
 
-// bool displayHourMinutesElseMinutesSeconds;
 uint8_t brightness;
 bool blinker;
+
+
 enum Time_type :uint8_t 
 {
     hours=0,
@@ -116,7 +119,6 @@ void setup() {
   buzzer.setPin(PIN_BUZZER);
 
   nextTimeUpdateMillis = millis();
-//   displayHourMinutesElseMinutesSeconds = true;
   cycleBrightness(true);
   clock_state = state_display_time;
   alarm_state  = state_alarm_init;
@@ -360,6 +362,13 @@ void set_time(Time_type t) {
 }
 
 void alarm_state_refresh(){
+
+    if (millis() > watchdog_last_button_press_millis + DELAY_ALARM_AUTO_ESCAPE_MILLIS){
+        alarm_state = state_alarm_end;
+        Serial.println("yeooie");
+        Serial.println(watchdog_last_button_press_millis);
+    }
+
  switch (alarm_state)
   {
     case state_alarm_init:
@@ -456,7 +465,7 @@ void alarm_state_refresh(){
     default:
     {
         Serial.println("ASSERT ERROR: unknown alarm set state");
-      clock_state = state_display_time;
+        clock_state = state_display_time;
     }
     break;
   }
@@ -513,8 +522,18 @@ void refresh_clock_state() {
   }
 }
 
-void loop() {
+void checkWatchDog(){
+    if (button_down.getValueChanged() ||
+        button_up.getValueChanged() ||
+        button_menu.getValueChanged() 
+        )
+    {
+        watchdog_last_button_press_millis = millis();
+    }
+}
 
+void loop() {
+  checkWatchDog();
   button_up.refresh();
   button_down.refresh();
   button_menu.refresh();
