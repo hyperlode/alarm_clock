@@ -455,7 +455,9 @@ void alarm_state_refresh(){
                         alarm_status_state = state_alarm_status_triggered;
                         Serial.println("alarm triggered...(exit time setting)");
                     }else{
-                        Serial.println("Do not trigger alarm while setting time");
+                        // DO NOT PRINT STUFF HERE, it will hang and crash.
+                        // Serial.println("Do not trigger alarm while setting time");
+                        // delay(1000);
                     }
 
                 }
@@ -474,6 +476,9 @@ void alarm_state_refresh(){
                         clock_state = state_display_time;
                         Serial.println("alarm triggered...(exit alarm setting)");
                         alarm_status_state = state_alarm_status_triggered;
+                    }else{
+                        // DO NOT PRINT STUFF HERE, it will hang and crash.
+                        Serial.println("alarm triggered...(will do nothing because we're setting the time)");
 
                     }
                 }
