@@ -4,12 +4,16 @@
 #include "DisplayDigitsHandler5Digits.h"
 #include "LedMultiplexer5x8.h"
 #include "Buzzer.h"
+#include <EEPROM.h>
 
 #define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 1 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
 #define DISPLAY_IS_COMMON_ANODE true //check led displays both displays should be of same type   //also set in SevSeg5Digits.h : MODEISCOMMONANODE
 #define DEFAULT_BRIGHTNESS 2
 #define PIN_DUMMY 66
 #define PIN_DUMMY_2 22 // randomly chosen. I've had it set to 67, and at some point, multiple segments were lit up. This STILL is C hey, it's gonna chug on forever!
+
+#define EEPROM_ADDRESS_ALARM_HOUR 0
+#define EEPROM_ADDRESS_ALARM_MINUTE 1
 
 // DO NOT USE pin 3 and 11 for PWM if working with tone
 // the common anode pins work with pwm. pwm and tone libraries interfere. 
@@ -52,6 +56,7 @@ Buzzer buzzer;
 long nextTimeUpdateMillis;
 long nextBlinkUpdateMillis;
 long nextDisplayTimeUpdateMillis;
+
 long watchdog_last_button_press_millis;
 bool alarm_triggered_memory;
 
@@ -150,12 +155,22 @@ void setup() {
   clock_state = state_display_time;
   alarm_state  = state_alarm_init;
 
-  rtc.read();
-  alarm_hour = rtc.hour;
-  alarm_minute = rtc.minute + 1;
-  
-//   alarm_hour = 7;
-//   alarm_minute = 0;
+
+// #define ALARM_DEBUG
+#ifdef ALARM_DEBUG
+
+//   rtc.read();
+//   alarm_hour = rtc.hour;
+//   alarm_minute = rtc.minute + 1;
+#else 
+
+  alarm_hour = EEPROM.read(EEPROM_ADDRESS_ALARM_HOUR);
+  alarm_minute = EEPROM.read(EEPROM_ADDRESS_ALARM_MINUTE);
+  if (alarm_hour == 0xff){
+    alarm_hour = 7;
+    alarm_minute = 0;
+  }
+#endif
 
 
   alarm_snooze_duration_minutes = 1;
@@ -584,7 +599,7 @@ void alarm_set_state_refresh(){
     }
 
     switch (alarm_state)
-  {
+    {
     case state_alarm_init:
     {
         alarm_state=state_alarm_display;
@@ -691,6 +706,15 @@ void alarm_set_state_refresh(){
     {
         alarm_state = state_alarm_init; // prepare for the next time. 
         clock_state = state_display_time;
+
+        // eeprom only write when changed.
+        if (EEPROM.read(EEPROM_ADDRESS_ALARM_HOUR) != alarm_hour){
+            EEPROM.write(EEPROM_ADDRESS_ALARM_HOUR, alarm_hour);
+            Serial.println("write eerprom");
+        }
+        if (EEPROM.read(EEPROM_ADDRESS_ALARM_MINUTE) != alarm_minute){
+            EEPROM.write(EEPROM_ADDRESS_ALARM_MINUTE, alarm_minute);
+        }
     }
     break;
     default:
