@@ -5,7 +5,7 @@
 #include "LedMultiplexer5x8.h"
 #include "Buzzer.h"
 
-#define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 2 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
+#define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 1 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
 #define DISPLAY_IS_COMMON_ANODE true //check led displays both displays should be of same type   //also set in SevSeg5Digits.h : MODEISCOMMONANODE
 #define DEFAULT_BRIGHTNESS 2
 #define PIN_DUMMY 66
@@ -356,7 +356,11 @@ void set_time_state_refresh(){
         break;
         case state_display_minutes_seconds:
         {
-            minutes_seconds_to_display();
+            if (millis() > nextTimeUpdateMillis ) {
+                nextTimeUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
+                minutes_seconds_to_display();
+            }
+
             if (button_up.getEdgeDown() || button_down.getEdgeDown()) {
             set_time_state = state_set_time_end;
             }
