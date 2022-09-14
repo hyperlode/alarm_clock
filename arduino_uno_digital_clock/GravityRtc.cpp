@@ -102,6 +102,35 @@ void GravityRtc::adjustRtc(uint16_t year,uint8_t month,uint8_t day,uint8_t week,
 	WriteTimeOff();
 }
 
+void GravityRtc::setAlarm(uint8_t hour,uint8_t minute){
+    // will only set hour and minute
+
+    Wire.beginTransmission(RTC_Address);
+	Wire.write(0x07);//Set the address for writing  alarm
+	Wire.write(char(0));
+    Wire.write(this->decTobcd(minute));
+	Wire.write(this->decTobcd(hour));
+	Wire.endTransmission();
+
+	Wire.beginTransmission(RTC_Address);
+	Wire.write(0x0E);   //Set the address for writing       alarm enable bits
+	Wire.write(0x07);
+	Wire.endTransmission();
+}
+
+void GravityRtc::readMemory(uint8_t* memoryDump)
+{
+	unsigned char n = 0;
+
+	Wire.requestFrom(RTC_Address, 15);
+	while (Wire.available())
+	{
+		allMem[n++] = Wire.read();
+	}
+	delayMicroseconds(1);
+	Wire.endTransmission();
+    memoryDump = allMem;
+}
 
 //********************************************************************************************
 // Function Name: readRtc()
@@ -156,6 +185,8 @@ void GravityRtc::processRtc()
 //********************************************************************************************
 uint8_t GravityRtc::decTobcd(uint8_t num)
 {
+    // every digit in a number is represented by four bits (hence the * 16)
+    // expect a maximum of 99 as num.
 	return ((num / 10 * 16) + (num % 10));
 }
 

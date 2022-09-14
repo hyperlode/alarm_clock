@@ -47,15 +47,18 @@ public:
 	void adjustRtc(uint16_t year,uint8_t month,uint8_t day,uint8_t week,
             	uint8_t hour,uint8_t minute,uint8_t second);
 
+    void setAlarm(uint8_t hour,uint8_t minute);
 	//initialization
 	void setup();
 
 	//Update sensor data
 	void read();
+    void readMemory(uint8_t* memoryDump);
 	
 
 private:
 	uint8_t date[7];
+	uint8_t allMem[32];
 
 	//Read RTC Time
 	void readRtc();

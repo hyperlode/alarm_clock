@@ -50,6 +50,8 @@ Button button_menu;
 Buzzer buzzer;
 
 long nextTimeUpdateMillis;
+long nextBlinkUpdateMillis;
+long nextDisplayTimeUpdateMillis;
 long watchdog_last_button_press_millis;
 bool alarm_triggered_memory;
 
@@ -142,6 +144,8 @@ void setup() {
   buzzer.setPin(PIN_BUZZER);
 
   nextTimeUpdateMillis = millis();
+  nextBlinkUpdateMillis = millis();
+  nextDisplayTimeUpdateMillis = millis();
   cycleBrightness(true);
   clock_state = state_display_time;
   alarm_state  = state_alarm_init;
@@ -159,6 +163,12 @@ void setup() {
 
 //   alarm_user_toggle_action = false;
   alarm_status_state = state_alarm_status_is_not_enabled;
+
+  uint8_t test[32];
+  rtc.readMemory(test);
+  for (uint8_t i=0;i<32;i++){
+    Serial.println(test[i]);
+  }
 }
 
 void cycleBrightness(bool init) {
@@ -288,9 +298,9 @@ void set_time(Time_type t) {
     }
   }
 
-  if (millis() > nextTimeUpdateMillis ) {
+  if (millis() > nextBlinkUpdateMillis ) {
     
-    nextTimeUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
+    nextBlinkUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
     rtc.read();
     divider_colon_to_display(rtc.second % 2);
 
@@ -322,12 +332,17 @@ void set_time(Time_type t) {
 
 void display_time_state_refresh() {
 
-  if (millis() > nextTimeUpdateMillis ) {
-    nextTimeUpdateMillis = millis() + TIME_UPDATE_DELAY;
-    rtc.read();
-    hour_now = rtc.hour;
-    minute_now = rtc.minute;
-    second_now = rtc.second;
+//   if (millis() > nextTimeUpdateMillis ) {
+//     nextTimeUpdateMillis = millis() + TIME_UPDATE_DELAY;
+//     rtc.read();
+//     hour_now = rtc.hour;
+//     minute_now = rtc.minute;
+//     second_now = rtc.second;
+//     
+//   }
+
+  if (millis() > nextDisplayTimeUpdateMillis ) {
+    nextDisplayTimeUpdateMillis = millis() + TIME_UPDATE_DELAY;
     divider_colon_to_display(second_now % 2);
     hour_minutes_to_display();
   }
@@ -356,8 +371,8 @@ void set_time_state_refresh(){
         break;
         case state_display_minutes_seconds:
         {
-            if (millis() > nextTimeUpdateMillis ) {
-                nextTimeUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
+            if (millis() > nextBlinkUpdateMillis ) {
+                nextBlinkUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
                 minutes_seconds_to_display();
             }
 
@@ -622,18 +637,20 @@ void alarm_set_state_refresh(){
         if (button_down.getEdgeDown()){
             nextStepRotate(&alarm_hour, 0, 0, 23);
             display_alarm();
+            rtc.setAlarm(alarm_hour, alarm_minute);
         } 
         if (button_up.getEdgeDown()){
             nextStepRotate(&alarm_hour, 1, 0, 23);
             display_alarm();
+            rtc.setAlarm(alarm_hour, alarm_minute);
         } 
         if (button_menu.getEdgeDown()){
             alarm_state=state_alarm_set_minutes;
             display_alarm();
         }
 
-        if (millis() > nextTimeUpdateMillis ) {
-            nextTimeUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
+        if (millis() > nextBlinkUpdateMillis ) {
+            nextBlinkUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
             display_alarm();
             blinker =!blinker;
             if (blinker){
@@ -648,17 +665,19 @@ void alarm_set_state_refresh(){
         if (button_down.getEdgeDown()){
             nextStepRotate(&alarm_minute, 0, 0, 59);
             display_alarm();
+            rtc.setAlarm(alarm_hour, alarm_minute);
         } 
         if (button_up.getEdgeDown()){
             nextStepRotate(&alarm_minute, 1, 0, 59);
             display_alarm();
+            rtc.setAlarm(alarm_hour, alarm_minute);
         } 
         if (button_menu.getEdgeDown()){
             display_alarm();
             alarm_state=state_alarm_display;
         }
-        if (millis() > nextTimeUpdateMillis ) {
-            nextTimeUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
+        if (millis() > nextBlinkUpdateMillis ) {
+            nextBlinkUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
             display_alarm();
             blinker =!blinker;
             if (blinker){
@@ -751,12 +770,15 @@ void checkWatchDog(){
 }
 
 void updateTimeNow(){
-    // limit calls to peripheral by only loading time once every 
     if (millis() > nextTimeUpdateMillis ) {
+        nextTimeUpdateMillis = millis() + TIME_UPDATE_DELAY;
+        
+        // limit calls to peripheral by only loading time once every 
         rtc.read();
         hour_now = rtc.hour;
         minute_now = rtc.minute;
         second_now = rtc.second;
+        Serial.println(second_now);
     }
 }
 
