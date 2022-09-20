@@ -732,6 +732,7 @@ void display_on_touch_state_refresh(){
         Serial.println("back to state display time");
         clock_state = state_display_time;
         hour_minutes_to_display();
+        alarm_activated_to_display((alarm_status_state == state_alarm_status_is_enabled));
         // Serial.println(brightness);
     
     }else if (button_menu.getEdgeDown() || button_up.getEdgeDown()){
@@ -739,6 +740,7 @@ void display_on_touch_state_refresh(){
         rtc.read();
         divider_colon_to_display(rtc.second % 2);
         hour_minutes_to_display();
+        alarm_activated_to_display((alarm_status_state == state_alarm_status_is_enabled));
         
     }else if (button_menu.getEdgeUp() || button_up.getEdgeUp()){
         // release button, clock light off
