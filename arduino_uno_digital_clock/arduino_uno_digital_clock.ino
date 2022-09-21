@@ -6,6 +6,8 @@
 #include "Buzzer.h"
 #include <EEPROM.h>
 
+// #define ENABLE_SERIAL
+
 #define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 1 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
 #define DISPLAY_IS_COMMON_ANODE true //check led displays both displays should be of same type   //also set in SevSeg5Digits.h : MODEISCOMMONANODE
 #define DEFAULT_BRIGHTNESS 2
@@ -36,6 +38,7 @@
 #define PIN_button_up A3
 #define PIN_button_down A2
 #define PIN_BUTTON_MENU A1
+#define PIN_BUTTON_EXTRA 0
 
 #define TIME_UPDATE_DELAY 1000
 #define TIME_HALF_BLINK_PERIOD_MILLIS 250
@@ -50,6 +53,7 @@ GravityRtc rtc;     //RTC Initialization
 Button button_up;
 Button button_down;
 Button button_menu;
+Button button_extra;
 
 Buzzer buzzer;
 
@@ -69,7 +73,7 @@ uint8_t snooze_count;
 
 // bool alarm_user_toggle_action;
 
-uint8_t brightness;
+uint8_t brightness_index;
 bool blinker;
 
 uint8_t hour_now;
@@ -128,7 +132,9 @@ Alarm_status_state alarm_status_state;
 
 void setup() {
 
-  Serial.begin(9600);
+#ifdef ENABLE_SERIAL
+   Serial.begin(9600);
+#endif 
   blinker = false;
 
   rtc.setup();
@@ -142,6 +148,7 @@ void setup() {
   button_up.init(PIN_button_up);
   button_down.init(PIN_button_down);
   button_menu.init(PIN_BUTTON_MENU);
+  button_extra.init(PIN_BUTTON_EXTRA);
 
   ledDisplay.Begin(DISPLAY_IS_COMMON_ANODE, PIN_DISPLAY_DIGIT_0, PIN_DISPLAY_DIGIT_1, PIN_DISPLAY_DIGIT_2, PIN_DISPLAY_DIGIT_3, PIN_DISPLAY_DIGIT_BUTTON_LIGHTS, PIN_DISPLAY_SEGMENT_A, PIN_DISPLAY_SEGMENT_B, PIN_DISPLAY_SEGMENT_C, PIN_DISPLAY_SEGMENT_D, PIN_DISPLAY_SEGMENT_E, PIN_DISPLAY_SEGMENT_F, PIN_DISPLAY_SEGMENT_G, PIN_DISPLAY_SEGMENT_DP);
   visualsManager.setMultiplexerBuffer(ledDisplay.getDigits());
@@ -181,44 +188,50 @@ void setup() {
 
   uint8_t test[32];
   rtc.readMemory(test);
-  for (uint8_t i=0;i<32;i++){
-    Serial.println(test[i]);
-  }
+//   for (uint8_t i=0;i<32;i++){
+//     Serial.println(test[i]);
+//   }
 }
 
 void cycleBrightness(bool init) {
 
-  uint8_t brightness_settings [] = {0, 1, 10, 80, 254}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
+#define BRIGHTNESS_LEVELS 3
+//#define CYCLING_GOES_BRIGHTER
 
-  //#define CYCLING_GOES_BRIGHTER
+#if (BRIGHTNESS_LEVELS == 4)
+  uint8_t brightness_settings [] = {0, 1, 10, 80, 254}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
+#elif (BRIGHTNESS_LEVELS == 3)
+  uint8_t brightness_settings [] = {0, 1, 10, 254}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
+#endif
+
 
 #ifdef CYCLING_GOES_BRIGHTER
   // if cycling goes brighter
   brightness ++;
-  if (brightness > 4) {
+  if (brightness > BRIGHTNESS_LEVELS) {
     brightness = 0; // zero is dark. but, maybe you want that... e.g. alarm active without display showing.
   }
 #else
   // cycling goes darker
-  if (brightness == 0) {
-    brightness = 4;
+  if (brightness_index == 0) {
+    brightness_index = BRIGHTNESS_LEVELS;
   } else {
-    brightness--;
+    brightness_index--;
   }
 #endif
 
   if (init) {
-    brightness = DEFAULT_BRIGHTNESS;
+    brightness_index = DEFAULT_BRIGHTNESS;
   }
 
   // enter night mode screen when zero visibility.
-  if (brightness == 0){
+  if (brightness_index == 0){
     visualsManager.setBlankDisplay();
-    Serial.println("dark mode enter.");
+    // Serial.println("dark mode enter.");
     clock_state = state_night_mode;
-    brightness = 4;
+    brightness_index = BRIGHTNESS_LEVELS;
   }
-  ledDisplay.setBrightness(brightness_settings[brightness], false);
+  ledDisplay.setBrightness(brightness_settings[brightness_index], false);
   
 }
 
@@ -367,6 +380,10 @@ void display_time_state_refresh() {
     clock_state = state_set_time;
 
   }
+  if (button_extra.getEdgeDown()) {
+    
+    clock_state = state_alarm_set;
+  }
 
   if (button_up.getEdgeDown()) {
     clock_state = state_alarm_set;
@@ -444,7 +461,7 @@ void alarm_state_refresh(){
         alarm_status_state = state_alarm_status_is_not_enabled;
         alarm_activated_to_display(false);
         snooze_count = 0;
-        Serial.println("Disable alarm");
+        // Serial.println("Disable alarm");
         
     }
     break;
@@ -461,7 +478,7 @@ void alarm_state_refresh(){
         alarm_status_state = state_alarm_status_is_enabled;
         alarm_activated_to_display(true);
         snooze_count = 0;
-        Serial.println("Enable alarm");
+        // Serial.println("Enable alarm");
     }
     break;
 
@@ -487,7 +504,7 @@ void alarm_state_refresh(){
                         set_time_state = state_set_time_init;
                         clock_state = state_display_time;
                         alarm_status_state = state_alarm_status_triggered;
-                        Serial.println("alarm triggered...(exit time setting)");
+                        // Serial.println("alarm triggered...(exit time setting)");
                     }else{
                         // DO NOT PRINT STUFF HERE, it will hang and crash.
                         // Serial.println("Do not trigger alarm while setting time");
@@ -508,11 +525,11 @@ void alarm_state_refresh(){
                     if (alarm_state != state_alarm_set_hours && alarm_state != state_alarm_set_minutes){
                         alarm_state = state_alarm_init;
                         clock_state = state_display_time;
-                        Serial.println("alarm triggered...(exit alarm setting)");
+                        // Serial.println("alarm triggered...(exit alarm setting)");
                         alarm_status_state = state_alarm_status_triggered;
                     }else{
                         // DO NOT PRINT STUFF HERE, it will hang and crash.
-                        Serial.println("alarm triggered...(will do nothing because we're setting the time)");
+                        // Serial.println("alarm triggered...(will do nothing because we're setting the time)");
 
                     }
                 }
@@ -525,7 +542,7 @@ void alarm_state_refresh(){
                 break;
                 default:
                 {
-                    Serial.println("alarm triggered...");
+                    // Serial.println("alarm triggered...");
 
                 }
                 break;
@@ -633,7 +650,7 @@ void alarm_set_state_refresh(){
                 break;
                 default:
                 {
-                    Serial.println("ASSERT ERROR: alarm state not expected");
+                    // Serial.println("ASSERT ERROR: alarm state not expected");
                 }
                 break;
 
@@ -710,7 +727,7 @@ void alarm_set_state_refresh(){
         // eeprom only write when changed.
         if (EEPROM.read(EEPROM_ADDRESS_ALARM_HOUR) != alarm_hour){
             EEPROM.write(EEPROM_ADDRESS_ALARM_HOUR, alarm_hour);
-            Serial.println("write eerprom");
+            // Serial.println("write eerprom");
         }
         if (EEPROM.read(EEPROM_ADDRESS_ALARM_MINUTE) != alarm_minute){
             EEPROM.write(EEPROM_ADDRESS_ALARM_MINUTE, alarm_minute);
@@ -719,7 +736,7 @@ void alarm_set_state_refresh(){
     break;
     default:
     {
-        Serial.println("ASSERT ERROR: unknown alarm set state");
+        // Serial.println("ASSERT ERROR: unknown alarm set state");
         clock_state = state_display_time;
     }
     break;
@@ -729,7 +746,7 @@ void alarm_set_state_refresh(){
 void display_on_touch_state_refresh(){
 
     if (button_down.getEdgeDown()){
-        Serial.println("back to state display time");
+        // Serial.println("back to state display time");
         clock_state = state_display_time;
         hour_minutes_to_display();
         alarm_activated_to_display((alarm_status_state == state_alarm_status_is_enabled));
@@ -804,7 +821,7 @@ void updateTimeNow(){
         hour_now = rtc.hour;
         minute_now = rtc.minute;
         second_now = rtc.second;
-        Serial.println(second_now);
+        // Serial.println(second_now);
     }
 }
 
@@ -814,6 +831,7 @@ void loop() {
   button_up.refresh();
   button_down.refresh();
   button_menu.refresh();
+  button_extra.refresh();
 
   // process
   updateTimeNow();
