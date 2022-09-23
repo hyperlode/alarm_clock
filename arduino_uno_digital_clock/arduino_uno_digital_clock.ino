@@ -110,7 +110,7 @@ enum Time_type : uint8_t
     seconds = 2
 };
 
-enum Clock_state : uint8_t
+enum Main_state : uint8_t
 {
     state_display_time = 0,
     state_set_time,
@@ -118,7 +118,7 @@ enum Clock_state : uint8_t
     state_alarm_set,
     state_kitchen_timer
 };
-Clock_state clock_state;
+Main_state main_state;
 
 enum Kitchen_timer_state : uint8_t
 {
@@ -195,7 +195,7 @@ void setup()
     nextBlinkUpdateMillis = millis();
     nextDisplayTimeUpdateMillis = millis();
     cycleBrightness(true);
-    clock_state = state_display_time;
+    main_state = state_display_time;
     alarm_state = state_alarm_init;
 
     kitchen_timer_set_time_index = 15;
@@ -272,7 +272,7 @@ void cycleBrightness(bool init)
     {
         visualsManager.setBlankDisplay();
         // Serial.println("dark mode enter.");
-        clock_state = state_night_mode;
+        main_state = state_night_mode;
         brightness_index = BRIGHTNESS_LEVELS;
     }
     ledDisplay.setBrightness(brightness_settings[brightness_index], false);
@@ -457,18 +457,18 @@ void display_time_state_refresh()
 
     if (button_menu.getEdgeDown())
     {
-        // clock_state = static_cast<Clock_state>(static_cast<int>(clock_state) + 1);;
-        clock_state = state_set_time;
+        // main_state = static_cast<Main_state>(static_cast<int>(main_state) + 1);;
+        main_state = state_set_time;
     }
     if (button_extra.getEdgeDown())
     {
         Serial.println("TSTTAAART");
-        clock_state = state_kitchen_timer;
+        main_state = state_kitchen_timer;
     }
 
     if (button_up.getEdgeDown())
     {
-        clock_state = state_alarm_set;
+        main_state = state_alarm_set;
     }
 
     if (button_down.getEdgeDown())
@@ -518,7 +518,7 @@ void set_time_state_refresh()
     case state_set_time_end:
     {
         set_time_state = state_set_time_init;
-        clock_state = state_display_time;
+        main_state = state_display_time;
         // Serial.println("at time state: END");
     }
     break;
@@ -585,7 +585,7 @@ void alarm_state_refresh()
             // // make sure there is only one trigger edge at an alarm occurence
 
             // alarm going off will interrupt ongoing user operations.
-            switch (clock_state)
+            switch (main_state)
             {
             case state_set_time:
             {
@@ -594,7 +594,7 @@ void alarm_state_refresh()
                     set_time_state != state_set_time_seconds)
                 {
                     set_time_state = state_set_time_init;
-                    clock_state = state_display_time;
+                    main_state = state_display_time;
                     alarm_status_state = state_alarm_status_triggered;
                     // Serial.println("alarm triggered...(exit time setting)");
                 }
@@ -617,7 +617,7 @@ void alarm_state_refresh()
                 if (alarm_state != state_alarm_set_hours && alarm_state != state_alarm_set_minutes)
                 {
                     alarm_state = state_alarm_init;
-                    clock_state = state_display_time;
+                    main_state = state_display_time;
                     // Serial.println("alarm triggered...(exit alarm setting)");
                     alarm_status_state = state_alarm_status_triggered;
                 }
@@ -720,7 +720,7 @@ void kitchen_timer_state_refresh()
         if (button_extra.getEdgeDown())
         {
             Serial.println("EEEND");
-            clock_state = state_display_time;
+            main_state = state_display_time;
         }
 
         if (button_down.getEdgeDown() || button_up.getEdgeDown())
@@ -741,7 +741,7 @@ void kitchen_timer_state_refresh()
     {
         if (button_extra.getEdgeDown())
         {
-            clock_state = state_display_time;
+            main_state = state_display_time;
         }
         if (button_menu.getEdgeDown())
         {
@@ -901,7 +901,7 @@ void alarm_set_state_refresh()
     case state_alarm_end:
     {
         alarm_state = state_alarm_init; // prepare for the next time.
-        clock_state = state_display_time;
+        main_state = state_display_time;
 
         // eeprom only write when changed.
         if (EEPROM.read(EEPROM_ADDRESS_ALARM_HOUR) != alarm_hour)
@@ -918,7 +918,7 @@ void alarm_set_state_refresh()
     default:
     {
         // Serial.println("ASSERT ERROR: unknown alarm set state");
-        clock_state = state_display_time;
+        main_state = state_display_time;
     }
     break;
     }
@@ -930,7 +930,7 @@ void display_on_touch_state_refresh()
     if (button_down.getEdgeDown())
     {
         // Serial.println("back to state display time");
-        clock_state = state_display_time;
+        main_state = state_display_time;
         hour_minutes_to_display();
         alarm_activated_to_display((alarm_status_state == state_alarm_status_is_enabled));
         // Serial.println(brightness);
@@ -950,13 +950,13 @@ void display_on_touch_state_refresh()
     }
 }
 
-void refresh_clock_state()
+void refresh_main_state()
 {
 
     // alarm FSM runs independently
     alarm_state_refresh();
 
-    switch (clock_state)
+    switch (main_state)
     {
     case state_display_time:
     {
@@ -985,7 +985,7 @@ void refresh_clock_state()
     break;
     default:
     {
-        clock_state = state_display_time;
+        main_state = state_display_time;
     }
     break;
     }
@@ -1028,7 +1028,7 @@ void loop()
     // process
     updateTimeNow();
     checkWatchDog();
-    refresh_clock_state();
+    refresh_main_state();
 
     // output
     buzzer.checkAndPlayNotesBuffer();
