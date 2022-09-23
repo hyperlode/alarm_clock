@@ -5,8 +5,9 @@
 #include "LedMultiplexer5x8.h"
 #include "Buzzer.h"
 #include <EEPROM.h>
+#include "SuperTimer.h"
 
-// #define ENABLE_SERIAL
+#define ENABLE_SERIAL
 
 #define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 1 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
 #define DISPLAY_IS_COMMON_ANODE true //check led displays both displays should be of same type   //also set in SevSeg5Digits.h : MODEISCOMMONANODE
@@ -29,7 +30,15 @@
 #define PIN_DISPLAY_SEGMENT_B 8
 #define PIN_DISPLAY_SEGMENT_C 11 //swapped
 #define PIN_DISPLAY_SEGMENT_D 3
-#define PIN_DISPLAY_SEGMENT_E 2
+
+#ifdef ENABLE_SERIAL
+
+#define PIN_DISPLAY_SEGMENT_E PIN_DUMMY
+#else
+
+#define PIN_DISPLAY_SEGMENT_E 0
+#endif
+
 #define PIN_DISPLAY_SEGMENT_F 13 // swapped!
 #define PIN_DISPLAY_SEGMENT_DP 4
 #define PIN_DISPLAY_SEGMENT_G  7 // swapped!
@@ -38,7 +47,7 @@
 #define PIN_button_up A3
 #define PIN_button_down A2
 #define PIN_BUTTON_MENU A1
-#define PIN_BUTTON_EXTRA 0
+#define PIN_BUTTON_EXTRA 2
 
 #define TIME_UPDATE_DELAY 1000
 #define TIME_HALF_BLINK_PERIOD_MILLIS 250
@@ -56,6 +65,8 @@ Button button_menu;
 Button button_extra;
 
 Buzzer buzzer;
+
+SuperTimer kitchenTimer;
 
 long nextTimeUpdateMillis;
 long nextBlinkUpdateMillis;
@@ -80,6 +91,20 @@ uint8_t hour_now;
 uint8_t minute_now;
 uint8_t second_now;
 
+int8_t kitchen_timer_set_time_index;
+const uint16_t timeDialDiscreteSeconds[] = {
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+    10, 15, 20, 25, 30, 45, 60, 75, 90, 120,
+    150, 180, 210, 240, 270, 300, 330, 360, 390, 420,
+    450, 480, 510, 540, 570, 600, 660, 720, 780, 840,
+    900, 960, 1020, 1080, 1140, 1200, 1260, 1320, 1380, 1440,
+    1500, 1560, 1620, 1680, 1740, 1800, 2100, 2400, 2700, 3000,
+    3300, 3600, 3900, 4200, 4500, 4800, 5100, 5400, 6000, 6600,
+    7200, 7800, 8400, 9000, 9600, 10200, 10800, 12600, 14400, 16200,
+    18000, 19800, 21600, 23400, 25200, 27000, 28800, 30600, 32400, 34200,
+    36000};
+
+
 enum Time_type :uint8_t 
 {
     hours=0,
@@ -92,9 +117,19 @@ enum Clock_state : uint8_t
   state_display_time = 0,
   state_set_time,
   state_night_mode,
-  state_alarm_set
+  state_alarm_set,
+  state_kitchen_timer
 };
 Clock_state clock_state;
+
+enum Kitchen_timer_state : uint8_t
+{
+  state_stopped = 0,
+  state_running,
+  state_running_invisible
+
+};
+Kitchen_timer_state kitchen_timer_state;
 
 enum Set_time_state: uint8_t 
 {
@@ -161,6 +196,8 @@ void setup() {
   cycleBrightness(true);
   clock_state = state_display_time;
   alarm_state  = state_alarm_init;
+
+  kitchen_timer_set_time_index = 15;
 
 
 // #define ALARM_DEBUG
@@ -382,7 +419,7 @@ void display_time_state_refresh() {
   }
   if (button_extra.getEdgeDown()) {
     
-    clock_state = state_alarm_set;
+    clock_state = state_kitchen_timer;
   }
 
   if (button_up.getEdgeDown()) {
@@ -607,6 +644,43 @@ void alarm_state_refresh(){
     }
 }
 
+void kitchen_timer_state_refresh(){
+   switch(kitchen_timer_state){
+    case (state_stopped):
+    {
+        char* disp;
+        disp = visualsManager.getDisplayTextBufHandle();
+        kitchenTimer.getTimeString(disp);
+        if (button_extra.getEdgeDown()){
+            clock_state = state_display_time;
+        }
+
+        if (button_down.getEdgeDown() || button_up.getEdgeDown()){
+
+// #ifdef ENABLE_SERIAL
+//             Serial.println(kitchen_timer_set_time_index);
+// #endif
+            
+            nextStep(&kitchen_timer_set_time_index, button_up.getEdgeDown(), 0,90,false);
+            kitchenTimer.setInitCountDownTimeSecs(timeDialDiscreteSeconds[kitchen_timer_set_time_index]);
+
+        } 
+
+         if (button_menu.getEdgeDown()){
+             kitchen_timer_state = state_running;
+        }
+
+    }
+    break;
+    default:
+    {
+
+    }
+    break;
+   }
+
+}
+
 void alarm_set_state_refresh(){
 
     if (millis() > watchdog_last_button_press_millis + DELAY_ALARM_AUTO_ESCAPE_MILLIS){
@@ -790,6 +864,11 @@ void refresh_clock_state() {
     case state_alarm_set:
     {
         alarm_set_state_refresh();
+    }
+    break;
+    case state_kitchen_timer:
+    {
+        kitchen_timer_state_refresh();
     }
     break;
     default:
