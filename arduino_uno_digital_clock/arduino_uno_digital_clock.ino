@@ -306,18 +306,42 @@ void add_leading_zeros(int16_t number, bool leading_zeros_for_most_left_digit)
     }
 }
 
-void divider_colon_to_display()
-{
-    // will blink with a two second period
-    rtc.read();
-    visualsManager.setDecimalPointToDisplay(rtc.second % 2, 1);
-}
+// void divider_colon_to_display()
+// {
+//     // will blink with a two second period
+//     rtc.read();
+//     visualsManager.setDecimalPointToDisplay(rtc.second % 2, 1);
+// }
+
 void divider_colon_to_display(bool active)
 {
     visualsManager.setDecimalPointToDisplay(active, 1);
 }
 
-void alarm_activated_to_display(bool active)
+void refresh_indicator_dot()
+{
+    // depending on state
+
+    if (alarm_status_state == state_alarm_status_snoozing)
+    {
+        // snoozing is priority. fast blink
+
+        set_display_indicator_dot((millis() % 500) > 250);
+    }
+    else if (kitchen_timer_state == state_running)
+        set_display_indicator_dot((millis() % 1000) > 500);
+
+    else if (alarm_status_state == state_alarm_status_is_enabled)
+    {
+        set_display_indicator_dot(true);
+    }
+    else if (alarm_status_state == state_alarm_status_is_not_enabled)
+    {
+        set_display_indicator_dot(false);
+    }
+}
+
+void set_display_indicator_dot(bool active)
 {
     visualsManager.setDecimalPointToDisplay(active, 0);
 }
@@ -460,9 +484,10 @@ void display_time_state_refresh()
         // main_state = static_cast<Main_state>(static_cast<int>(main_state) + 1);;
         main_state = state_set_time;
     }
+
     if (button_extra.getEdgeDown())
     {
-        Serial.println("TSTTAAART");
+        kitchen_timer_refresh_display();
         main_state = state_kitchen_timer;
     }
 
@@ -550,7 +575,7 @@ void alarm_state_refresh()
         buzzer.addNoteToNotesBuffer(C4_1);
         buzzer.addNoteToNotesBuffer(REST_4_8);
         alarm_status_state = state_alarm_status_is_not_enabled;
-        alarm_activated_to_display(false);
+        // set_display_indicator_dot(false);
         snooze_count = 0;
         // Serial.println("Disable alarm");
     }
@@ -566,7 +591,7 @@ void alarm_state_refresh()
         buzzer.addNoteToNotesBuffer(G4_1);
         buzzer.addNoteToNotesBuffer(REST_4_8);
         alarm_status_state = state_alarm_status_is_enabled;
-        alarm_activated_to_display(true);
+        // set_display_indicator_dot(true);
         snooze_count = 0;
         // Serial.println("Enable alarm");
     }
@@ -684,7 +709,7 @@ void alarm_state_refresh()
             alarm_status_state = state_alarm_status_disable;
         }
 
-        alarm_activated_to_display((millis() % 500) > 250);
+        // set_display_indicator_dot((millis() % 500) > 250);
     }
     break;
 
@@ -697,17 +722,19 @@ void alarm_state_refresh()
 
 void kitchen_timer_refresh_display()
 {
+    char *disp;
+    disp = visualsManager.getDisplayTextBufHandle();
+    kitchenTimer.getTimeString(disp);
 }
 void kitchen_timer_state_refresh()
 {
     switch (kitchen_timer_state)
     {
-    
+    // todo refresh display and restore "saved state"
+
     case (state_stopped_refresh_display):
     {
-        char *disp;
-        disp = visualsManager.getDisplayTextBufHandle();
-        kitchenTimer.getTimeString(disp);
+       kitchen_timer_refresh_display();
         kitchen_timer_state = state_stopped;
     }
     break;
@@ -719,7 +746,6 @@ void kitchen_timer_state_refresh()
         }
         if (button_extra.getEdgeDown())
         {
-            Serial.println("EEEND");
             main_state = state_display_time;
         }
 
@@ -745,7 +771,7 @@ void kitchen_timer_state_refresh()
         }
         if (button_menu.getEdgeDown())
         {
-            //kitchenTimer.paused(!kitchenTimer.getIsPaused());
+            // kitchenTimer.paused(!kitchenTimer.getIsPaused());
             kitchenTimer.reset();
             kitchen_timer_state = state_stopped_refresh_display;
         }
@@ -757,13 +783,10 @@ void kitchen_timer_state_refresh()
     break;
     case (state_running_display_refresh):
     {
-        char *disp;
-        disp = visualsManager.getDisplayTextBufHandle();
-        kitchenTimer.getTimeString(disp);
+       kitchen_timer_refresh_display();
         kitchen_timer_state = state_running;
     }
     break;
-
 
     default:
     {
@@ -931,9 +954,9 @@ void display_on_touch_state_refresh()
     {
         // Serial.println("back to state display time");
         main_state = state_display_time;
-        hour_minutes_to_display();
-        alarm_activated_to_display((alarm_status_state == state_alarm_status_is_enabled));
-        // Serial.println(brightness);
+        // hour_minutes_to_display();
+        // set_display_indicator_dot((alarm_status_state == state_alarm_status_is_enabled));
+        //  Serial.println(brightness);
     }
     else if (button_menu.getEdgeDown() || button_up.getEdgeDown())
     {
@@ -941,7 +964,7 @@ void display_on_touch_state_refresh()
         rtc.read();
         divider_colon_to_display(rtc.second % 2);
         hour_minutes_to_display();
-        alarm_activated_to_display((alarm_status_state == state_alarm_status_is_enabled));
+        // set_display_indicator_dot((alarm_status_state == state_alarm_status_is_enabled));
     }
     else if (button_menu.getEdgeUp() || button_up.getEdgeUp())
     {
@@ -970,6 +993,7 @@ void refresh_main_state()
     break;
     case state_night_mode:
     {
+        // todo rework. this is not a good way. Dark mode should just skip visuals update, and if a button pressed, allow visual update until depressed.
         display_on_touch_state_refresh();
     }
     break;
@@ -980,6 +1004,7 @@ void refresh_main_state()
     break;
     case state_kitchen_timer:
     {
+        
         kitchen_timer_state_refresh();
     }
     break;
@@ -1029,6 +1054,7 @@ void loop()
     updateTimeNow();
     checkWatchDog();
     refresh_main_state();
+    refresh_indicator_dot();
 
     // output
     buzzer.checkAndPlayNotesBuffer();
