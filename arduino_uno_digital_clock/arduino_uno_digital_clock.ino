@@ -124,7 +124,9 @@ enum Kitchen_timer_state : uint8_t
 {
     state_stopped = 0,
     state_running,
-    state_running_invisible
+    state_running_invisible,
+    state_stopped_refresh_display,
+    state_running_display_refresh
 
 };
 Kitchen_timer_state kitchen_timer_state;
@@ -197,6 +199,7 @@ void setup()
     alarm_state = state_alarm_init;
 
     kitchen_timer_set_time_index = 15;
+    kitchen_timer_state = state_stopped_refresh_display;
 
 // #define ALARM_DEBUG
 #ifdef ALARM_DEBUG
@@ -459,7 +462,7 @@ void display_time_state_refresh()
     }
     if (button_extra.getEdgeDown())
     {
-
+        Serial.println("TSTTAAART");
         clock_state = state_kitchen_timer;
     }
 
@@ -692,37 +695,76 @@ void alarm_state_refresh()
     }
 }
 
+void kitchen_timer_refresh_display()
+{
+}
 void kitchen_timer_state_refresh()
 {
     switch (kitchen_timer_state)
     {
-    case (state_stopped):
+    
+    case (state_stopped_refresh_display):
     {
         char *disp;
         disp = visualsManager.getDisplayTextBufHandle();
         kitchenTimer.getTimeString(disp);
+        kitchen_timer_state = state_stopped;
+    }
+    break;
+    case (state_stopped):
+    {
+        if (kitchenTimer.getIsStarted())
+        {
+            kitchen_timer_state = state_running_display_refresh;
+        }
         if (button_extra.getEdgeDown())
         {
+            Serial.println("EEEND");
             clock_state = state_display_time;
         }
 
         if (button_down.getEdgeDown() || button_up.getEdgeDown())
         {
-
-            // #ifdef ENABLE_SERIAL
-            //             Serial.println(kitchen_timer_set_time_index);
-            // #endif
-
             nextStep(&kitchen_timer_set_time_index, button_up.getEdgeDown(), 0, 90, false);
             kitchenTimer.setInitCountDownTimeSecs(timeDialDiscreteSeconds[kitchen_timer_set_time_index]);
+            kitchen_timer_state = state_stopped_refresh_display;
         }
 
         if (button_menu.getEdgeDown())
         {
             kitchen_timer_state = state_running;
+            kitchenTimer.start();
         }
     }
     break;
+    case (state_running):
+    {
+        if (button_extra.getEdgeDown())
+        {
+            clock_state = state_display_time;
+        }
+        if (button_menu.getEdgeDown())
+        {
+            //kitchenTimer.paused(!kitchenTimer.getIsPaused());
+            kitchenTimer.reset();
+            kitchen_timer_state = state_stopped_refresh_display;
+        }
+        if (kitchenTimer.getEdgeSinceLastCallFirstGivenHundredsPartOfSecond(500, true, false))
+        {
+            kitchen_timer_state = state_running_display_refresh;
+        }
+    }
+    break;
+    case (state_running_display_refresh):
+    {
+        char *disp;
+        disp = visualsManager.getDisplayTextBufHandle();
+        kitchenTimer.getTimeString(disp);
+        kitchen_timer_state = state_running;
+    }
+    break;
+
+
     default:
     {
     }
