@@ -404,6 +404,7 @@ void minutes_seconds_to_display()
     timeAsNumber = 100 * ((int16_t)rtc.minute) + (int16_t)rtc.second;
     visualsManager.setNumberToDisplay(timeAsNumber, false);
     add_leading_zeros(timeAsNumber, true);
+    divider_colon_to_display(second_now % 2);
 }
 
 void hour_minutes_to_display()
@@ -419,6 +420,7 @@ void hour_minutes_to_display()
     //     }
     //   }
     add_leading_zeros(timeAsNumber, false);
+    divider_colon_to_display(second_now % 2);
 }
 
 void set_time(Time_type t)
@@ -515,7 +517,7 @@ void display_time_state_refresh()
     if (millis() > nextDisplayTimeUpdateMillis)
     {
         nextDisplayTimeUpdateMillis = millis() + TIME_UPDATE_DELAY;
-        divider_colon_to_display(second_now % 2);
+        
         hour_minutes_to_display();
     }
 
@@ -1032,9 +1034,10 @@ void display_on_touch_state_refresh()
     else if (button_menu.getEdgeDown() || button_up.getEdgeDown())
     {
         // press button, time is displayed
-        rtc.read();
-        divider_colon_to_display(rtc.second % 2);
+        // rtc.read();
+        // divider_colon_to_display(rtc.second % 2);
         hour_minutes_to_display();
+        divider_colon_to_display(true); // have a static time indidation.
         // set_display_indicator_dot((alarm_status_state == state_alarm_status_is_enabled));
     }
     else if (button_menu.getEdgeUp() || button_up.getEdgeUp())
