@@ -10,13 +10,18 @@
 #define ENABLE_SERIAL
 
 #define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 1 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
-#define DISPLAY_IS_COMMON_ANODE true           // check led displays both displays should be of same type   //also set in SevSeg5Digits.h : MODEISCOMMONANODE
-#define DEFAULT_BRIGHTNESS 2
-#define PIN_DUMMY 66
-#define PIN_DUMMY_2 22 // randomly chosen. I've had it set to 67, and at some point, multiple segments were lit up. This STILL is C hey, it's gonna chug on forever!
+
+#define DISPLAY_IS_COMMON_ANODE true // check led displays both displays should be of same type   //also set in SevSeg5Digits.h : MODEISCOMMONANODE
+#define BRIGHTNESS_LEVELS 3
+#define DEFAULT_BRIGHTNESS_LEVEL_INDEX 3
 
 #define EEPROM_ADDRESS_ALARM_HOUR 0
 #define EEPROM_ADDRESS_ALARM_MINUTE 1
+
+#define KITCHEN_TIMER_DEFAULT_INDEX 10
+
+#define PIN_DUMMY 66
+#define PIN_DUMMY_2 22 // randomly chosen. I've had it set to 67, and at some point, multiple segments were lit up. This STILL is C hey, it's gonna chug on forever!
 
 // DO NOT USE pin 3 and 11 for PWM if working with tone
 // the common anode pins work with pwm. pwm and tone libraries interfere.
@@ -70,6 +75,7 @@ SuperTimer kitchenTimer;
 long nextTimeUpdateMillis;
 long nextBlinkUpdateMillis;
 long nextDisplayTimeUpdateMillis;
+long nextUpdateDividerCountdownTimerMillis;
 
 long watchdog_last_button_press_millis;
 bool alarm_triggered_memory;
@@ -126,7 +132,8 @@ enum Kitchen_timer_state : uint8_t
     state_running,
     state_running_invisible,
     state_stopped_refresh_display,
-    state_running_display_refresh
+    state_running_refresh_display,
+    state_enter
 
 };
 Kitchen_timer_state kitchen_timer_state;
@@ -142,7 +149,7 @@ enum Set_time_state : uint8_t
 };
 Set_time_state set_time_state;
 
-enum Alarm_state : uint8_t
+enum Alarm_set_state : uint8_t
 {
     state_alarm_init = 0,
     state_alarm_display = 1,
@@ -150,7 +157,7 @@ enum Alarm_state : uint8_t
     state_alarm_set_minutes = 3,
     state_alarm_end = 4
 };
-Alarm_state alarm_state;
+Alarm_set_state alarm_set_state;
 
 enum Alarm_status_state : uint8_t
 {
@@ -194,12 +201,14 @@ void setup()
     nextTimeUpdateMillis = millis();
     nextBlinkUpdateMillis = millis();
     nextDisplayTimeUpdateMillis = millis();
+    nextUpdateDividerCountdownTimerMillis = millis();
     cycleBrightness(true);
     main_state = state_display_time;
-    alarm_state = state_alarm_init;
+    alarm_set_state = state_alarm_init;
 
-    kitchen_timer_set_time_index = 15;
-    kitchen_timer_state = state_stopped_refresh_display;
+    kitchen_timer_set_time_index = KITCHEN_TIMER_DEFAULT_INDEX;
+    kitchenTimer.setInitCountDownTimeSecs(timeDialDiscreteSeconds[kitchen_timer_set_time_index]);
+    // kitchen_timer_state = state_stopped_refresh_display;
 
 // #define ALARM_DEBUG
 #ifdef ALARM_DEBUG
@@ -234,7 +243,6 @@ void setup()
 void cycleBrightness(bool init)
 {
 
-#define BRIGHTNESS_LEVELS 3
     //#define CYCLING_GOES_BRIGHTER
 
 #if (BRIGHTNESS_LEVELS == 4)
@@ -264,7 +272,7 @@ void cycleBrightness(bool init)
 
     if (init)
     {
-        brightness_index = DEFAULT_BRIGHTNESS;
+        brightness_index = DEFAULT_BRIGHTNESS_LEVEL_INDEX;
     }
 
     // enter night mode screen when zero visibility.
@@ -284,7 +292,7 @@ void display_alarm()
     timeAsNumber = 100 * alarm_hour + alarm_minute;
     visualsManager.setNumberToDisplay(timeAsNumber, false);
     add_leading_zeros(timeAsNumber, false);
-    divider_colon_to_display(true);
+    // divider_colon_to_display(true);
 }
 
 void add_leading_zeros(int16_t number, bool leading_zeros_for_most_left_digit)
@@ -317,6 +325,26 @@ void divider_colon_to_display(bool active)
 {
     visualsManager.setDecimalPointToDisplay(active, 1);
 }
+// void refresh_divider_colon(){
+
+//     if (main_state == state_alarm_set){
+//         divider_colon_to_display(true);
+
+//     }else if (main_state == set_time_state_refresh){
+//         divider_colon_to_display(true);
+
+//     }
+//     }else if (main_state == state_kitchen_timer){
+//         if (){
+
+//         }
+//         divider_colon_to_display();
+
+//     }
+//     }else if (main_state == state_display_time){
+
+//     }
+// }
 
 void refresh_indicator_dot()
 {
@@ -328,8 +356,19 @@ void refresh_indicator_dot()
 
         set_display_indicator_dot((millis() % 500) > 250);
     }
+    else if (main_state == state_alarm_set)
+    {
+        if (alarm_status_state == state_alarm_status_is_enabled)
+        {
+            set_display_indicator_dot(true);
+        }
+        else if (alarm_status_state == state_alarm_status_is_not_enabled)
+        {
+            set_display_indicator_dot(false);
+        }
+    }
     else if (kitchen_timer_state == state_running)
-        set_display_indicator_dot((millis() % 1000) > 500);
+        set_display_indicator_dot(kitchenTimer.getInFirstGivenHundredsPartOfSecond(500));
 
     else if (alarm_status_state == state_alarm_status_is_enabled)
     {
@@ -422,6 +461,7 @@ void set_time(Time_type t)
     {
 
         nextBlinkUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
+
         rtc.read();
         divider_colon_to_display(rtc.second % 2);
 
@@ -487,7 +527,8 @@ void display_time_state_refresh()
 
     if (button_extra.getEdgeDown())
     {
-        kitchen_timer_refresh_display();
+        // kitchen_timer_refresh_display();
+        kitchen_timer_state = state_enter;
         main_state = state_kitchen_timer;
     }
 
@@ -562,7 +603,7 @@ void set_time_state_refresh()
     }
 }
 
-void alarm_state_refresh()
+void alarm_status_refresh()
 {
     switch (alarm_status_state)
     {
@@ -639,9 +680,9 @@ void alarm_state_refresh()
             case state_alarm_set:
             {
                 // dont trigger alarm while setting the alarm time
-                if (alarm_state != state_alarm_set_hours && alarm_state != state_alarm_set_minutes)
+                if (alarm_set_state != state_alarm_set_hours && alarm_set_state != state_alarm_set_minutes)
                 {
-                    alarm_state = state_alarm_init;
+                    alarm_set_state = state_alarm_init;
                     main_state = state_display_time;
                     // Serial.println("alarm triggered...(exit alarm setting)");
                     alarm_status_state = state_alarm_status_triggered;
@@ -720,21 +761,30 @@ void alarm_state_refresh()
     }
 }
 
-void kitchen_timer_refresh_display()
-{
-    char *disp;
-    disp = visualsManager.getDisplayTextBufHandle();
-    kitchenTimer.getTimeString(disp);
-}
 void kitchen_timer_state_refresh()
 {
     switch (kitchen_timer_state)
     {
-    // todo refresh display and restore "saved state"
+        // todo refresh display and restore "saved state"
 
+    case (state_enter):
+    {
+        if (kitchenTimer.getIsStarted())
+        {
+            kitchen_timer_state = state_running_refresh_display;
+        }
+        else
+        {
+            kitchen_timer_state = state_stopped_refresh_display;
+        }
+    }
+    break;
     case (state_stopped_refresh_display):
     {
-       kitchen_timer_refresh_display();
+        char *disp;
+        disp = visualsManager.getDisplayTextBufHandle();
+        kitchenTimer.getTimeString(disp);
+        divider_colon_to_display(true);
         kitchen_timer_state = state_stopped;
     }
     break;
@@ -742,7 +792,7 @@ void kitchen_timer_state_refresh()
     {
         if (kitchenTimer.getIsStarted())
         {
-            kitchen_timer_state = state_running_display_refresh;
+            kitchen_timer_state = state_running_refresh_display;
         }
         if (button_extra.getEdgeDown())
         {
@@ -775,15 +825,36 @@ void kitchen_timer_state_refresh()
             kitchenTimer.reset();
             kitchen_timer_state = state_stopped_refresh_display;
         }
-        if (kitchenTimer.getEdgeSinceLastCallFirstGivenHundredsPartOfSecond(500, true, false))
+
+        if (button_down.getEdgeDown() || button_up.getEdgeDown())
         {
-            kitchen_timer_state = state_running_display_refresh;
+            // nextStep(&kitchen_timer_set_time_index, button_up.getEdgeDown(), 0, 90, false);
+
+            kitchenTimer.setOffsetInitTimeMillis((1 - 2 * button_down.getValue()) * 60000);
+            kitchen_timer_state = state_running_refresh_display;
+        }
+
+        if (kitchenTimer.getEdgeSinceLastCallFirstGivenHundredsPartOfSecond(500, true, true))
+        {
+            kitchen_timer_state = state_running_refresh_display;
         }
     }
     break;
-    case (state_running_display_refresh):
+    case (state_running_refresh_display):
     {
-       kitchen_timer_refresh_display();
+
+        // if (millis() > nextUpdateDividerCountdownTimerMillis)
+        // {
+
+        //     nextUpdateDividerCountdownTimerMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
+
+        char *disp;
+        disp = visualsManager.getDisplayTextBufHandle();
+        kitchenTimer.getTimeString(disp);
+        divider_colon_to_display(kitchenTimer.getInFirstGivenHundredsPartOfSecond(500));
+
+        // }
+
         kitchen_timer_state = state_running;
     }
     break;
@@ -800,16 +871,16 @@ void alarm_set_state_refresh()
 
     if (millis() > watchdog_last_button_press_millis + DELAY_ALARM_AUTO_ESCAPE_MILLIS)
     {
-        alarm_state = state_alarm_end;
+        alarm_set_state = state_alarm_end;
         // Serial.println("yeooie");
         // Serial.println(watchdog_last_button_press_millis);
     }
 
-    switch (alarm_state)
+    switch (alarm_set_state)
     {
     case state_alarm_init:
     {
-        alarm_state = state_alarm_display;
+        alarm_set_state = state_alarm_display;
         display_alarm();
     }
     break;
@@ -848,11 +919,11 @@ void alarm_set_state_refresh()
         }
         if (button_menu.getEdgeDown())
         {
-            alarm_state = state_alarm_set_hours;
+            alarm_set_state = state_alarm_set_hours;
         }
         if (button_down.getEdgeDown())
         {
-            alarm_state = state_alarm_end;
+            alarm_set_state = state_alarm_end;
         }
     }
     break;
@@ -872,7 +943,7 @@ void alarm_set_state_refresh()
         }
         if (button_menu.getEdgeDown())
         {
-            alarm_state = state_alarm_set_minutes;
+            alarm_set_state = state_alarm_set_minutes;
             display_alarm();
         }
 
@@ -906,7 +977,7 @@ void alarm_set_state_refresh()
         if (button_menu.getEdgeDown())
         {
             display_alarm();
-            alarm_state = state_alarm_display;
+            alarm_set_state = state_alarm_display;
         }
         if (millis() > nextBlinkUpdateMillis)
         {
@@ -923,7 +994,7 @@ void alarm_set_state_refresh()
     break;
     case state_alarm_end:
     {
-        alarm_state = state_alarm_init; // prepare for the next time.
+        alarm_set_state = state_alarm_init; // prepare for the next time.
         main_state = state_display_time;
 
         // eeprom only write when changed.
@@ -977,7 +1048,7 @@ void refresh_main_state()
 {
 
     // alarm FSM runs independently
-    alarm_state_refresh();
+    alarm_status_refresh();
 
     switch (main_state)
     {
@@ -1004,7 +1075,7 @@ void refresh_main_state()
     break;
     case state_kitchen_timer:
     {
-        
+
         kitchen_timer_state_refresh();
     }
     break;

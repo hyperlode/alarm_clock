@@ -28,6 +28,16 @@ void SuperTimer::setInitTimeMillis(long milliSeconds)
 {
     this->initTimeMillis = milliSeconds;
 }
+// void SuperTimer::offsetInitTimeMillisWhileRunningAndAdjust(long milliSeconds, bool modifyInitPermanently)
+// {
+//     // check offset
+//     long offset =  milliSeconds - this->initTimeMillis;
+//     if (modifyInitPermanently){
+//         this->initTimeMillis = milliSeconds;
+//     }
+
+//     this->startedMillis += offset;
+// }
 
 void SuperTimer::setOffsetInitTimeMillis(long offsetMillis)
 {

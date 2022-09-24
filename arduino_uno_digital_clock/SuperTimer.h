@@ -17,6 +17,7 @@ public:
     SuperTimer();
     void incrementInitTimeMillis(int16_t deltaMillis);
     void setInitTimeMillis(long milliSeconds);
+    // void setInitTimeMillisWhileRunningAndAdjust(long milliSeconds);
     void setInitTimeSecs(long seconds);
     long getInitTimeMillis();
     int getInitTimeSecs();
