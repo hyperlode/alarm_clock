@@ -7,7 +7,7 @@
 #include <EEPROM.h>
 #include "SuperTimer.h"
 
-#define ENABLE_SERIAL
+// #define ENABLE_SERIAL
 
 #define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 1 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
 
@@ -15,8 +15,9 @@
 #define BRIGHTNESS_LEVELS 3
 #define DEFAULT_BRIGHTNESS_LEVEL_INDEX 3
 
-#define EEPROM_ADDRESS_ALARM_HOUR 0
-#define EEPROM_ADDRESS_ALARM_MINUTE 1
+#define EEPROM_ADDRESS_ALARM_HOUR 0 // 1 byte
+#define EEPROM_ADDRESS_ALARM_MINUTE 1 // 1 byte
+#define EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX 2 // 1 byte
 
 #define KITCHEN_TIMER_DEFAULT_INDEX 10
 
@@ -136,7 +137,8 @@ enum Kitchen_timer_state : uint8_t
     state_running_invisible,
     state_stopped_refresh_display,
     state_running_refresh_display,
-    state_enter
+    state_enter,
+    state_exit
 
 };
 Kitchen_timer_state kitchen_timer_state;
@@ -349,8 +351,10 @@ void refresh_indicator_dot()
                 set_display_indicator_dot(false);
             }
         }
-        else if (kitchen_timer_state == state_running)
+        else if (kitchen_timer_state == state_running){
             set_display_indicator_dot(kitchenTimer.getInFirstGivenHundredsPartOfSecond(500));
+
+        }
 
         else if (alarm_status_state == state_alarm_status_is_enabled)
         {
@@ -730,7 +734,7 @@ void alarm_set_state_refresh()
         {
             EEPROM.write(EEPROM_ADDRESS_ALARM_HOUR, alarm_hour);
             // Serial.println("write eerprom");
-        }
+        }   
         if (EEPROM.read(EEPROM_ADDRESS_ALARM_MINUTE) != alarm_minute)
         {
             EEPROM.write(EEPROM_ADDRESS_ALARM_MINUTE, alarm_minute);
@@ -906,11 +910,10 @@ void alarm_status_refresh()
 
 void kitchen_timer_state_refresh()
 {
-    // if (millis() > watchdog_last_button_press_millis + DELAY_KITCHEN_TIMER_AUTO_ESCAPE_MILLIS)
-    // {
-        // main_state = state_display_time;
-       
-    // }
+    if (millis() > watchdog_last_button_press_millis + DELAY_KITCHEN_TIMER_AUTO_ESCAPE_MILLIS)
+    {
+       kitchen_timer_state = state_exit;
+    }
 
     switch (kitchen_timer_state)
     {
@@ -926,6 +929,7 @@ void kitchen_timer_state_refresh()
         {
             kitchen_timer_state = state_stopped_refresh_display;
         }
+         
     }
     break;
     case (state_stopped_refresh_display):
@@ -945,7 +949,7 @@ void kitchen_timer_state_refresh()
         }
         if (button_extra.getEdgeDown())
         {
-            main_state = state_display_time;
+            kitchen_timer_state = state_exit;
         }
 
         if (button_down.getEdgeDown() || button_up.getEdgeDown())
@@ -994,6 +998,14 @@ void kitchen_timer_state_refresh()
         divider_colon_to_display(kitchenTimer.getInFirstGivenHundredsPartOfSecond(500));
 
         kitchen_timer_state = state_running;
+    }
+    break;
+    case (state_exit):
+    {
+        if ( kitchen_timer_set_time_index != EEPROM.read(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX)){
+            EEPROM.write(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX, kitchen_timer_set_time_index);
+        }
+        main_state = state_display_time;
     }
     break;
 
@@ -1078,7 +1090,9 @@ void checkWatchDog()
 {
     if (button_down.getValueChanged() ||
         button_up.getValueChanged() ||
-        button_menu.getValueChanged())
+        button_menu.getValueChanged()|| 
+        button_extra.getValueChanged()
+        )
     {
         watchdog_last_button_press_millis = millis();
     }
