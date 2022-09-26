@@ -453,6 +453,7 @@ void seconds_to_display()
     {
         visualsManager.setCharToDisplay('0', 2); // leading zero if less than ten seconds
     }
+    divider_colon_to_display(second_now % 2);
 }
 
 void minutes_seconds_to_display()
@@ -485,38 +486,37 @@ void hour_minutes_to_display()
 
 void set_time(Time_type t)
 {
-    if (button_up.getEdgeDown() || button_down.getEdgeDown())
+    if (button_up.isPressedEdge() || button_down.isPressedEdge() || button_up.getLongPressPeriodicalEdge() || button_down.getLongPressPeriodicalEdge())
     {
         rtc.read();
-
+        
         if (t == hours)
         {
-            nextStepRotate(&rtc.hour, button_up.getEdgeDown(), 0, 23);
+            nextStepRotate(&rtc.hour, button_up.isPressed(), 0, 23);
+            nextBlinkUpdateMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinker = true;
+            hour_minutes_to_display();
+            hour_now = rtc.hour;
         }
         else if (t == minutes)
         {
-            nextStepRotate(&rtc.minute, button_up.getEdgeDown(), 0, 59);
+            nextStepRotate(&rtc.minute, button_up.isPressed(), 0, 59);
+            nextBlinkUpdateMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinker = true;
+            hour_minutes_to_display();
+            minute_now = rtc.minute;
         }
         else if (t == seconds)
         {
-            // nextStepRotate(&rtc.minute, button_up.getEdgeDown(), 0, 59);
             rtc.second = 0;
+            nextBlinkUpdateMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinker = true;
+            seconds_to_display();
+            second_now = rtc.second;
         }
         rtc.adjustRtc(rtc.year, rtc.month, rtc.day, rtc.week, rtc.hour, rtc.minute, rtc.second);
 
         // display updated time here. Even in the "off time" of the blinking process, it will still display the change for the remainder of the off-time. This is good.
-        if (t == hours)
-        {
-            hour_minutes_to_display();
-        }
-        else if (t == minutes)
-        {
-            hour_minutes_to_display();
-        }
-        else if (t == seconds)
-        {
-            seconds_to_display();
-        }
     }
 
     if (millis() > nextBlinkUpdateMillis)
@@ -524,8 +524,8 @@ void set_time(Time_type t)
 
         nextBlinkUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
 
-        rtc.read();
-        divider_colon_to_display(rtc.second % 2);
+        // rtc.read();
+        // divider_colon_to_display(now_second % 2);
 
         if (t == hours)
         {
@@ -581,25 +581,25 @@ void display_time_state_refresh()
         hour_minutes_to_display();
     }
 
-    if (button_menu.getEdgeDown())
+    if (button_menu.isPressedEdge())
     {
         // main_state = static_cast<Main_state>(static_cast<int>(main_state) + 1);;
         main_state = state_set_time;
     }
 
-    if (button_extra.getEdgeDown())
+    if (button_extra.isPressedEdge())
     {
         // kitchen_timer_refresh_display();
         kitchen_timer_state = state_enter;
         main_state = state_kitchen_timer;
     }
 
-    if (button_up.getEdgeDown())
+    if (button_up.isPressedEdge())
     {
         main_state = state_alarm_set;
     }
 
-    if (button_down.getEdgeDown())
+    if (button_down.isPressedEdge())
     {
         cycleBrightness(false);
     }
@@ -622,7 +622,7 @@ void set_time_state_refresh()
             minutes_seconds_to_display();
         }
 
-        if (button_up.getEdgeDown() || button_down.getEdgeDown())
+        if (button_up.isPressedEdge() || button_down.isPressedEdge())
         {
             set_time_state = state_set_time_end;
         }
@@ -655,7 +655,7 @@ void set_time_state_refresh()
     }
     break;
     }
-    if (button_menu.getEdgeDown())
+    if (button_menu.isPressedEdge())
     {
         // cycle trough states in sequence
         set_time_state = static_cast<Set_time_state>(static_cast<int>(set_time_state) + 1);
@@ -683,7 +683,7 @@ void alarm_set_state_refresh()
     break;
     case state_alarm_display:
     {
-        if (button_down.getEdgeDown())
+        if (button_down.isPressedEdge())
         {
 
             // state_alarm_status = state_alarm_status_toggle_active;
@@ -714,11 +714,11 @@ void alarm_set_state_refresh()
             break;
             }
         }
-        if (button_menu.getEdgeDown())
+        if (button_menu.isPressedEdge())
         {
             alarm_set_state = state_alarm_set_hours;
         }
-        if (button_up.getEdgeDown())
+        if (button_up.isPressedEdge())
         {
             alarm_set_state = state_alarm_end;
         }
@@ -726,19 +726,13 @@ void alarm_set_state_refresh()
     break;
     case state_alarm_set_hours:
     {
-        if (button_down.getEdgeDown())
+        if (button_down.isPressedEdge() || button_up.isPressedEdge() || button_down.getLongPressPeriodicalEdge() || button_up.getLongPressPeriodicalEdge())
         {
-            nextStepRotate(&alarm_hour, 0, 0, 23);
-            display_alarm();
-            rtc.setAlarm(alarm_hour, alarm_minute);
+            nextStepRotate(&alarm_hour, button_up.isPressed(), 0, 23);
+            nextBlinkUpdateMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinker = true;
         }
-        if (button_up.getEdgeDown())
-        {
-            nextStepRotate(&alarm_hour, 1, 0, 23);
-            display_alarm();
-            rtc.setAlarm(alarm_hour, alarm_minute);
-        }
-        if (button_menu.getEdgeDown())
+        if (button_menu.isPressedEdge())
         {
             alarm_set_state = state_alarm_set_minutes;
             display_alarm();
@@ -759,19 +753,16 @@ void alarm_set_state_refresh()
     break;
     case state_alarm_set_minutes:
     {
-        if (button_down.getEdgeDown())
+        if (button_down.isPressedEdge() || button_up.isPressedEdge() || button_down.getLongPressPeriodicalEdge() || button_up.getLongPressPeriodicalEdge())
         {
-            nextStepRotate(&alarm_minute, 0, 0, 59);
+            nextStepRotate(&alarm_minute, button_up.isPressed(), 0, 59);
             display_alarm();
+            nextBlinkUpdateMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinker = true;
             rtc.setAlarm(alarm_hour, alarm_minute);
         }
-        if (button_up.getEdgeDown())
-        {
-            nextStepRotate(&alarm_minute, 1, 0, 59);
-            display_alarm();
-            rtc.setAlarm(alarm_hour, alarm_minute);
-        }
-        if (button_menu.getEdgeDown())
+
+        if (button_menu.isPressedEdge())
         {
             display_alarm();
             alarm_set_state = state_alarm_display;
@@ -824,7 +815,8 @@ void alarm_status_refresh()
 
         // alarm_user_toggle_action = false;
         buzzer.addNoteToNotesBuffer(G4_1);
-        buzzer.addNoteToNotesBuffer(REST_8_8);
+        buzzer.addNoteToNotesBuffer(REST_1_8);
+        buzzer.addNoteToNotesBuffer(C4_1);
         buzzer.addNoteToNotesBuffer(C4_1);
         buzzer.addNoteToNotesBuffer(REST_8_8);
         alarm_status_state = state_alarm_status_is_not_enabled;
@@ -839,7 +831,8 @@ void alarm_status_refresh()
         // alarm_user_toggle_action = false;
         // buzzer.addRandomSoundToNotesBuffer(0,255);
         buzzer.addNoteToNotesBuffer(C4_1);
-        buzzer.addNoteToNotesBuffer(REST_8_8);
+        buzzer.addNoteToNotesBuffer(REST_1_8);
+        buzzer.addNoteToNotesBuffer(G4_1);
         buzzer.addNoteToNotesBuffer(G4_1);
         buzzer.addNoteToNotesBuffer(REST_8_8);
         alarm_status_state = state_alarm_status_is_enabled;
@@ -954,7 +947,7 @@ void alarm_status_refresh()
         {
             alarm_status_state = state_alarm_status_triggered;
         }
-        if (!button_up.getValue() &&
+        if (button_up.isPressed() &&
             millis() > (button_up.getLastStateChangeMillis() + ALARM_USER_STOP_BUTTON_PRESS_MILLIS))
         {
             snooze_count = 0;
@@ -1025,7 +1018,7 @@ void kitchen_timer_state_refresh()
     break;
     case (state_stopped):
     {
-        if (button_menu.getEdgeDown())
+        if (button_menu.isPressedEdge())
         {
             kitchen_timer_state = state_running;
             kitchenTimer.start();
@@ -1041,14 +1034,14 @@ void kitchen_timer_state_refresh()
             kitchen_timer_state = state_running_refresh_display;
         }
 
-        if (button_extra.getEdgeDown())
+        if (button_extra.isPressedEdge())
         {
             kitchen_timer_state = state_exit;
         }
 
-        if (button_down.getEdgeDown() || button_up.getEdgeDown() || button_down.getLongPressPeriodicalEdge() || button_up.getLongPressPeriodicalEdge())
+        if (button_down.isPressedEdge() || button_up.isPressedEdge() || button_down.getLongPressPeriodicalEdge() || button_up.getLongPressPeriodicalEdge())
         {
-            nextStep(&kitchen_timer_set_time_index, button_up.getValue(), 0, 90, false);
+            nextStep(&kitchen_timer_set_time_index, button_up.isPressed(), 0, 90, false);
             kitchenTimer.setInitCountDownTimeSecs(timeDialDiscreteSeconds[kitchen_timer_set_time_index]);
             kitchen_timer_state = state_stopped_refresh_display;
             set_blink_offset();
@@ -1061,18 +1054,18 @@ void kitchen_timer_state_refresh()
         {
             kitchen_timer_state = state_running_refresh_display;
         }
-        else if (button_extra.getEdgeDown())
+        else if (button_extra.isPressedEdge())
         {
             main_state = state_display_time;
         }
-        else if (button_menu.getEdgeDown())
+        else if (button_menu.isPressedEdge())
         {
             kitchenTimer.reset();
             kitchen_timer_state = state_stopped_refresh_display;
         }
-        else if (button_down.getEdgeDown() || button_up.getEdgeDown())
+        else if (button_down.isPressedEdge() || button_up.isPressedEdge())
         {
-            kitchenTimer.setOffsetInitTimeMillis((1 - 2 * button_down.getValue()) * 60000);
+            kitchenTimer.setOffsetInitTimeMillis((1 - 2 * button_down.isPressed()) * 60000);
             kitchen_timer_state = state_running_refresh_display;
         }
     }
@@ -1134,7 +1127,7 @@ void alarm_kitchen_timer_refresh()
 void display_on_touch_state_refresh()
 {
 
-    if (button_down.getEdgeDown())
+    if (button_down.isPressedEdge())
     {
         // Serial.println("back to state display time");
         main_state = state_display_time;
@@ -1142,7 +1135,7 @@ void display_on_touch_state_refresh()
         // set_display_indicator_dot((alarm_status_state == state_alarm_status_is_enabled));
         //  Serial.println(brightness);
     }
-    else if (button_menu.getEdgeDown() || button_up.getEdgeDown())
+    else if (button_menu.isPressedEdge() || button_up.isPressedEdge())
     {
         // press button, time is displayed
         // rtc.read();

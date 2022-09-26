@@ -18,6 +18,9 @@ void Button::init(int pin){
 bool Button::isPressed(){
     return !getValue();
 }
+bool Button::isPressedEdge(){
+    return getEdgeDown();
+}
 
 long Button::getLastStateChangeMillis(){
     // can be used for long button pressed, check how long a button is in a certain state.
