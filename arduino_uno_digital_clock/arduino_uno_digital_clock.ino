@@ -63,8 +63,6 @@
 #define ALARM_USER_STOP_BUTTON_PRESS_MILLIS 1000
 #define KITCHEN_TIMER_ENDED_PERIODICAL_BEEP_SECONDS 60
 
-
-
 DisplayManagement visualsManager;
 LedMultiplexer5x8 ledDisplay;
 GravityRtc rtc; // RTC Initialization
@@ -82,6 +80,7 @@ bool beep_memory;
 
 long nextTimeUpdateMillis;
 long nextBlinkUpdateMillis;
+long nextKitchenBlinkUpdateMillis;
 long nextDisplayTimeUpdateMillis;
 
 bool display_dot_status_memory;
@@ -212,6 +211,7 @@ void setup()
 
     nextTimeUpdateMillis = millis();
     nextBlinkUpdateMillis = millis();
+    nextKitchenBlinkUpdateMillis = millis();
     nextDisplayTimeUpdateMillis = millis();
     cycleBrightness(true);
     main_state = state_display_time;
@@ -364,8 +364,9 @@ void refresh_indicator_dot()
         if (kitchen_timer_state == state_running)
         {
             set_display_indicator_dot(kitchenTimer.getInFirstGivenHundredsPartOfSecond(500));
-        }else{
-
+        }
+        else
+        {
         }
     }
 
@@ -954,35 +955,49 @@ void kitchen_timer_state_refresh()
     break;
     case (state_stopped_refresh_display):
     {
+
         char *disp;
         disp = visualsManager.getDisplayTextBufHandle();
-        kitchenTimer.getTimeString(disp);
+        if ((millis() % 500) < 250)
+        {
+            disp[0] = ' ';
+            visualsManager.blanksToBuf(disp);
+        }
+        else
+        {
+            kitchenTimer.getTimeString(disp);
+            kitchen_timer_state = state_stopped;
+        }
         divider_colon_to_display(true);
-        kitchen_timer_state = state_stopped;
     }
     break;
     case (state_stopped):
     {
+        if (millis() > nextKitchenBlinkUpdateMillis)
+        {
+            // Serial.println("aeois");
+            nextKitchenBlinkUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
+            kitchen_timer_state = state_stopped_refresh_display;
+        }
         if (kitchenTimer.getIsStarted())
         {
             kitchen_timer_state = state_running_refresh_display;
         }
-        if (button_extra.getEdgeDown())
+        else if (button_extra.getEdgeDown())
         {
             kitchen_timer_state = state_exit;
         }
+        else
 
-        if (button_down.getEdgeDown() || button_up.getEdgeDown() 
-            || button_down.getLongPressPeriodicalEdge()
-            || button_up.getLongPressPeriodicalEdge()
-            )
+        if (button_down.getEdgeDown() || button_up.getEdgeDown() || button_down.getLongPressPeriodicalEdge() || button_up.getLongPressPeriodicalEdge())
         {
             nextStep(&kitchen_timer_set_time_index, button_up.getValue(), 0, 90, false);
             kitchenTimer.setInitCountDownTimeSecs(timeDialDiscreteSeconds[kitchen_timer_set_time_index]);
             kitchen_timer_state = state_stopped_refresh_display;
         }
+        else
 
-        if (button_menu.getEdgeDown())
+            if (button_menu.getEdgeDown())
         {
             kitchen_timer_state = state_running;
             kitchenTimer.start();
@@ -1142,8 +1157,8 @@ void checkWatchDog()
         button_down.getValueChanged() ||
         button_up.getValueChanged() ||
         button_menu.getValueChanged() ||
-        button_extra.getValueChanged()||
-        button_down.getLongPressPeriodicalEdge()||
+        button_extra.getValueChanged() ||
+        button_down.getLongPressPeriodicalEdge() ||
         button_up.getLongPressPeriodicalEdge() ||
         button_menu.getLongPressPeriodicalEdge() ||
         button_extra.getLongPressPeriodicalEdge())
