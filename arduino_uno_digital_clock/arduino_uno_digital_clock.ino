@@ -62,6 +62,7 @@
 #define DELAY_KITCHEN_TIMER_AUTO_ESCAPE_MILLIS 5000
 #define ALARM_USER_STOP_BUTTON_PRESS_MILLIS 1000
 #define KITCHEN_TIMER_ENDED_PERIODICAL_BEEP_SECONDS 60
+#define SNOOZE_TIME_MINUTES 5
 
 DisplayManagement visualsManager;
 LedMultiplexer5x8 ledDisplay;
@@ -82,6 +83,7 @@ long nextTimeUpdateMillis;
 long nextBlinkUpdateMillis;
 long nextKitchenBlinkUpdateMillis;
 long nextDisplayTimeUpdateMillis;
+long blink_offset;
 
 bool display_dot_status_memory;
 
@@ -182,6 +184,33 @@ enum Alarm_status_state : uint8_t
 };
 Alarm_status_state alarm_status_state;
 
+// bool Apps::millis_second_period()
+// {
+//     return millis() % 1000 > 500;
+// }
+
+// bool Apps::millis_quarter_second_period()
+// {
+//     return millis() % 250 > 125;
+// }
+
+// bool Apps::millis_half_second_period()
+// {
+//     return millis() % 500 > 250;
+// }
+
+// bool Apps::millis_blink_250_750ms()
+// {
+//     // true for shorter part of the second
+//     return (millis() - blink_offset) % 1000 > 750;
+// }
+
+void set_blink_offset()
+{
+    // keeps blink return to the same value. e.g. menu blinking between value and text. while dial rotates, we want to only see the value.
+    blink_offset = millis() % 1000;
+}
+
 void setup()
 {
 
@@ -221,6 +250,7 @@ void setup()
     kitchen_timer_set_time_index = EEPROM.read(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX);
     kitchenTimer.setInitCountDownTimeSecs(timeDialDiscreteSeconds[kitchen_timer_set_time_index]);
     // kitchen_timer_state = state_stopped_refresh_display;
+    blink_offset = 0;
 
 // #define ALARM_DEBUG
 #ifdef ALARM_DEBUG
@@ -239,7 +269,7 @@ void setup()
     }
 #endif
 
-    alarm_snooze_duration_minutes = 1;
+    alarm_snooze_duration_minutes = SNOOZE_TIME_MINUTES;
     snooze_count = 0;
 
     //   alarm_user_toggle_action = false;
@@ -341,12 +371,48 @@ void divider_colon_to_display(bool active)
 void refresh_indicator_dot()
 {
     // depending on state
-
-    if (alarm_status_state == state_alarm_status_snoozing)
+    // if ((millis()%100))
+    if (main_state == state_display_time)
     {
-        // snoozing is priority. fast blink
+        // set_display_indicator_dot(kitchenTimer.getInFirstGivenHundredsPartOfSecond(500));
+        if (alarm_status_state == state_alarm_status_snoozing)
+        {
+            set_display_indicator_dot((millis() % 250) > 125);
+        }
+        else if (kitchenTimer.getIsStarted())
+        {
 
-        set_display_indicator_dot((millis() % 500) > 250);
+            if (kitchenTimer.getTimeIsNegative())
+            {
+                set_display_indicator_dot((millis() % 1000) > 500);
+            }
+            else
+            {
+                set_display_indicator_dot((millis() % 500) > 250);
+            }
+        }
+        else if (alarm_status_state == state_alarm_status_is_enabled)
+        {
+            set_display_indicator_dot(true);
+        }
+        else
+        {
+            set_display_indicator_dot(false);
+        }
+    }
+    else if (main_state == state_kitchen_timer)
+    {
+        if (kitchen_timer_state == state_running)
+        {
+            if (kitchenTimer.getTimeIsNegative())
+            {
+                set_display_indicator_dot((millis() % 1000) > 500);
+            }
+            else
+            {
+                set_display_indicator_dot((millis() % 500) > 250);
+            }
+        }
     }
     else if (main_state == state_alarm_set)
     {
@@ -359,22 +425,8 @@ void refresh_indicator_dot()
             set_display_indicator_dot(false);
         }
     }
-    else if (main_state == state_kitchen_timer)
-    {
-        if (kitchen_timer_state == state_running)
-        {
-            set_display_indicator_dot(kitchenTimer.getInFirstGivenHundredsPartOfSecond(500));
-        }
-        else
-        {
-        }
-    }
 
-    else if (alarm_status_state == state_alarm_status_is_enabled)
-    {
-        set_display_indicator_dot(true);
-    }
-    else if (alarm_status_state == state_alarm_status_is_not_enabled)
+    else
     {
         set_display_indicator_dot(false);
     }
@@ -958,49 +1010,48 @@ void kitchen_timer_state_refresh()
 
         char *disp;
         disp = visualsManager.getDisplayTextBufHandle();
-        if ((millis() % 500) < 250)
+        if (((millis() - blink_offset) % 1000) < 500)
+        {
+            kitchenTimer.getTimeString(disp);
+        }
+        else
         {
             disp[0] = ' ';
             visualsManager.blanksToBuf(disp);
         }
-        else
-        {
-            kitchenTimer.getTimeString(disp);
-            kitchen_timer_state = state_stopped;
-        }
         divider_colon_to_display(true);
+        kitchen_timer_state = state_stopped;
     }
     break;
     case (state_stopped):
     {
+        if (button_menu.getEdgeDown())
+        {
+            kitchen_timer_state = state_running;
+            kitchenTimer.start();
+        }
         if (millis() > nextKitchenBlinkUpdateMillis)
         {
-            // Serial.println("aeois");
             nextKitchenBlinkUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
             kitchen_timer_state = state_stopped_refresh_display;
         }
+
         if (kitchenTimer.getIsStarted())
         {
             kitchen_timer_state = state_running_refresh_display;
         }
-        else if (button_extra.getEdgeDown())
+
+        if (button_extra.getEdgeDown())
         {
             kitchen_timer_state = state_exit;
         }
-        else
 
         if (button_down.getEdgeDown() || button_up.getEdgeDown() || button_down.getLongPressPeriodicalEdge() || button_up.getLongPressPeriodicalEdge())
         {
             nextStep(&kitchen_timer_set_time_index, button_up.getValue(), 0, 90, false);
             kitchenTimer.setInitCountDownTimeSecs(timeDialDiscreteSeconds[kitchen_timer_set_time_index]);
             kitchen_timer_state = state_stopped_refresh_display;
-        }
-        else
-
-            if (button_menu.getEdgeDown())
-        {
-            kitchen_timer_state = state_running;
-            kitchenTimer.start();
+            set_blink_offset();
         }
     }
     break;
