@@ -12,6 +12,10 @@
 
 #define DEBOUNCE_TIME 50
 
+#define BUTTON_LONG_PRESS_INITIAL_DELAY_MILLIS 300
+#define BUTTON_LONG_PRESS_FAKE_EDGE_PERIOD_MILLIS 200
+
+
 class Button: public BinaryInput{
 //class Button{
   public:
@@ -19,11 +23,16 @@ class Button: public BinaryInput{
     void init(int pin); 
     void refresh();
     long getLastStateChangeMillis();
-    
-    
+    bool isPressed();
+    bool getLongPressPeriodicalEdge();
+
+    long longPressStartMillis;
+    int16_t longPressEdgeCount;
+
   private:
     int pin;
-    bool memory;
+    bool button_value_memory;
+    bool button_longpress_edge_memory;
 //    bool val_debounced;
     long debounce_start;
     bool is_debounced;

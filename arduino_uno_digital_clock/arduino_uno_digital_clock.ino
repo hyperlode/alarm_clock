@@ -7,7 +7,7 @@
 #include <EEPROM.h>
 #include "SuperTimer.h"
 
-#define ENABLE_SERIAL
+// #define ENABLE_SERIAL
 
 #define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 1 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
 
@@ -61,8 +61,9 @@
 #define DELAY_ALARM_AUTO_ESCAPE_MILLIS 5000
 #define DELAY_KITCHEN_TIMER_AUTO_ESCAPE_MILLIS 5000
 #define ALARM_USER_STOP_BUTTON_PRESS_MILLIS 1000
+#define KITCHEN_TIMER_ENDED_PERIODICAL_BEEP_SECONDS 60
 
-#define KITCHEN_TIMER_ENDED_PERIODICAL_BEEP_SECONDS 5
+
 
 DisplayManagement visualsManager;
 LedMultiplexer5x8 ledDisplay;
@@ -146,7 +147,7 @@ enum Kitchen_timer_state : uint8_t
 
 };
 Kitchen_timer_state kitchen_timer_state;
-Kitchen_timer_state state_mem_tmp;
+// Kitchen_timer_state state_mem_tmp;
 
 enum Set_time_state : uint8_t
 {
@@ -358,9 +359,14 @@ void refresh_indicator_dot()
             set_display_indicator_dot(false);
         }
     }
-    else if (kitchen_timer_state == state_running)
+    else if (main_state == state_kitchen_timer)
     {
-        set_display_indicator_dot(kitchenTimer.getInFirstGivenHundredsPartOfSecond(500));
+        if (kitchen_timer_state == state_running)
+        {
+            set_display_indicator_dot(kitchenTimer.getInFirstGivenHundredsPartOfSecond(500));
+        }else{
+
+        }
     }
 
     else if (alarm_status_state == state_alarm_status_is_enabled)
@@ -612,8 +618,6 @@ void alarm_set_state_refresh()
     if (millis() > watchdog_last_button_press_millis + DELAY_ALARM_AUTO_ESCAPE_MILLIS)
     {
         alarm_set_state = state_alarm_end;
-        // Serial.println("yeooie");
-        // Serial.println(watchdog_last_button_press_millis);
     }
 
     switch (alarm_set_state)
@@ -781,11 +785,10 @@ void alarm_status_refresh()
     {
         // alarm_user_toggle_action = false;
         // buzzer.addRandomSoundToNotesBuffer(0,255);
-        buzzer.addNoteToNotesBuffer(C4_2);
-        buzzer.addNoteToNotesBuffer(REST_4_8);
+        buzzer.addNoteToNotesBuffer(C4_1);
+        buzzer.addNoteToNotesBuffer(REST_8_8);
         buzzer.addNoteToNotesBuffer(G4_1);
-        buzzer.addNoteToNotesBuffer(G4_1);
-        buzzer.addNoteToNotesBuffer(REST_4_8);
+        buzzer.addNoteToNotesBuffer(REST_8_8);
         alarm_status_state = state_alarm_status_is_enabled;
         // set_display_indicator_dot(true);
         snooze_count = 0;
@@ -956,7 +959,6 @@ void kitchen_timer_state_refresh()
         kitchenTimer.getTimeString(disp);
         divider_colon_to_display(true);
         kitchen_timer_state = state_stopped;
-
     }
     break;
     case (state_stopped):
@@ -970,9 +972,12 @@ void kitchen_timer_state_refresh()
             kitchen_timer_state = state_exit;
         }
 
-        if (button_down.getEdgeDown() || button_up.getEdgeDown())
+        if (button_down.getEdgeDown() || button_up.getEdgeDown() 
+            || button_down.getLongPressPeriodicalEdge()
+            || button_up.getLongPressPeriodicalEdge()
+            )
         {
-            nextStep(&kitchen_timer_set_time_index, button_up.getEdgeDown(), 0, 90, false);
+            nextStep(&kitchen_timer_set_time_index, button_up.getValue(), 0, 90, false);
             kitchenTimer.setInitCountDownTimeSecs(timeDialDiscreteSeconds[kitchen_timer_set_time_index]);
             kitchen_timer_state = state_stopped_refresh_display;
         }
@@ -999,9 +1004,7 @@ void kitchen_timer_state_refresh()
             kitchenTimer.reset();
             kitchen_timer_state = state_stopped_refresh_display;
         }
-        else
-
-            if (button_down.getEdgeDown() || button_up.getEdgeDown())
+        else if (button_down.getEdgeDown() || button_up.getEdgeDown())
         {
             kitchenTimer.setOffsetInitTimeMillis((1 - 2 * button_down.getValue()) * 60000);
             kitchen_timer_state = state_running_refresh_display;
@@ -1010,9 +1013,6 @@ void kitchen_timer_state_refresh()
     break;
     case (state_running_refresh_display):
     {
-        // #ifdef ENABLE_SERIAL
-        //     Serial.println("iiiiiiififj");
-        // #endif
         char *disp;
         disp = visualsManager.getDisplayTextBufHandle();
         kitchenTimer.getTimeString(disp);
@@ -1138,10 +1138,15 @@ void refresh_main_state()
 
 void checkWatchDog()
 {
-    if (button_down.getValueChanged() ||
+    if (
+        button_down.getValueChanged() ||
         button_up.getValueChanged() ||
         button_menu.getValueChanged() ||
-        button_extra.getValueChanged())
+        button_extra.getValueChanged()||
+        button_down.getLongPressPeriodicalEdge()||
+        button_up.getLongPressPeriodicalEdge() ||
+        button_menu.getLongPressPeriodicalEdge() ||
+        button_extra.getLongPressPeriodicalEdge())
     {
         watchdog_last_button_press_millis = millis();
     }

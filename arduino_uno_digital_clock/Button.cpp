@@ -10,7 +10,13 @@ void Button::init(int pin){
   //val_debounced = digitalRead(this->pin);
   setValue(digitalRead(this->pin));
   is_debounced= true;
-  memory =false;
+  button_value_memory =false;
+  button_longpress_edge_memory = false;
+}
+
+
+bool Button::isPressed(){
+    return !getValue();
 }
 
 long Button::getLastStateChangeMillis(){
@@ -18,24 +24,44 @@ long Button::getLastStateChangeMillis(){
     return debounce_start;
 }
 
+bool Button::getLongPressPeriodicalEdge(){
+  bool edge_detected;
+  edge_detected = false;
+  if (isPressed()){
+    if (millis() > (longPressStartMillis + BUTTON_LONG_PRESS_INITIAL_DELAY_MILLIS )){
+        bool delay_expired = millis() > (longPressStartMillis + BUTTON_LONG_PRESS_INITIAL_DELAY_MILLIS + longPressEdgeCount* BUTTON_LONG_PRESS_FAKE_EDGE_PERIOD_MILLIS);
+        if (delay_expired && button_longpress_edge_memory )
+            {
+            longPressEdgeCount++;
+            //Serial.println("long p[ress edge");
+            edge_detected = true;
+        }
+        button_longpress_edge_memory = delay_expired;
+    }
+  }
+  return edge_detected;
+}
+
 void Button::refresh(){
   refreshEdges(); 
   bool val = digitalRead(this->pin);
 
-  if (val != memory){
+  if (val != button_value_memory){
     debounce_start = millis();
     //Serial.println("debounce start");
     is_debounced= false;
   }
 
-  if (millis() > debounce_start + DEBOUNCE_TIME && !is_debounced){
-    //val_debounced = val;
+  if ((millis() > (debounce_start + DEBOUNCE_TIME)) && !is_debounced){
     setValue(val);
-    //Serial.println("button edge");
-    //debounce_start = millis() + 100000;
     is_debounced= true;
+
+    longPressStartMillis = millis();
+    longPressEdgeCount = 0;
   }
   
-  memory = val;
+
+  
+  button_value_memory = val;
   
 }
