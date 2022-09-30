@@ -21,10 +21,17 @@ bool Button::isPressed(){
 bool Button::isPressedEdge(){
     return getEdgeDown();
 }
+bool Button::isUnpressedEdge(){
+    return getEdgeUp();
+}
 
 long Button::getLastStateChangeMillis(){
     // can be used for long button pressed, check how long a button is in a certain state.
     return debounce_start;
+}
+
+int16_t Button::getLongPressCount(){
+    return longPressEdgeCount;
 }
 
 bool Button::getLongPressPeriodicalEdge(){
@@ -36,7 +43,8 @@ bool Button::getLongPressPeriodicalEdge(){
         if (delay_expired && button_longpress_edge_memory )
             {
             longPressEdgeCount++;
-            //Serial.println("long p[ress edge");
+            // Serial.println("long p[ress edge");
+            // Serial.println(longPressEdgeCount);
             edge_detected = true;
         }
         button_longpress_edge_memory = delay_expired;

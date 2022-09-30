@@ -25,7 +25,9 @@ class Button: public BinaryInput{
     long getLastStateChangeMillis();
     bool isPressed();
     bool isPressedEdge();
+    bool isUnpressedEdge();
     bool getLongPressPeriodicalEdge();
+    int16_t getLongPressCount();
 
     long longPressStartMillis;
     int16_t longPressEdgeCount;

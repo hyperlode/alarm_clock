@@ -683,7 +683,7 @@ void alarm_set_state_refresh()
     break;
     case state_alarm_display:
     {
-        if (button_down.isPressedEdge())
+        if (button_down.isPressedEdge() || ((button_up.getLongPressCount()==0) && button_up.getLongPressPeriodicalEdge()))
         {
 
             // state_alarm_status = state_alarm_status_toggle_active;
@@ -722,6 +722,7 @@ void alarm_set_state_refresh()
         {
             alarm_set_state = state_alarm_end;
         }
+        
     }
     break;
     case state_alarm_set_hours:
@@ -814,10 +815,9 @@ void alarm_status_refresh()
     {
 
         // alarm_user_toggle_action = false;
-        buzzer.addNoteToNotesBuffer(G4_1);
+        buzzer.addNoteToNotesBuffer(G4_4);
         buzzer.addNoteToNotesBuffer(REST_1_8);
-        buzzer.addNoteToNotesBuffer(C4_1);
-        buzzer.addNoteToNotesBuffer(C4_1);
+        buzzer.addNoteToNotesBuffer(C4_2);
         buzzer.addNoteToNotesBuffer(REST_8_8);
         alarm_status_state = state_alarm_status_is_not_enabled;
         // set_display_indicator_dot(false);
@@ -830,10 +830,9 @@ void alarm_status_refresh()
     {
         // alarm_user_toggle_action = false;
         // buzzer.addRandomSoundToNotesBuffer(0,255);
-        buzzer.addNoteToNotesBuffer(C4_1);
+        buzzer.addNoteToNotesBuffer(C4_4);
         buzzer.addNoteToNotesBuffer(REST_1_8);
-        buzzer.addNoteToNotesBuffer(G4_1);
-        buzzer.addNoteToNotesBuffer(G4_1);
+        buzzer.addNoteToNotesBuffer(G4_2);
         buzzer.addNoteToNotesBuffer(REST_8_8);
         alarm_status_state = state_alarm_status_is_enabled;
         // set_display_indicator_dot(true);
@@ -1124,7 +1123,7 @@ void alarm_kitchen_timer_refresh()
     beep_memory = kitchen_timer_beep;
 }
 
-void display_on_touch_state_refresh()
+void dark_mode_refresh()
 {
 
     if (button_down.isPressedEdge())
@@ -1135,7 +1134,7 @@ void display_on_touch_state_refresh()
         // set_display_indicator_dot((alarm_status_state == state_alarm_status_is_enabled));
         //  Serial.println(brightness);
     }
-    else if (button_menu.isPressedEdge() || button_up.isPressedEdge())
+    else if (button_menu.isPressedEdge() || button_up.isPressedEdge() || button_extra.isPressedEdge())
     {
         // press button, time is displayed
         // rtc.read();
@@ -1144,7 +1143,7 @@ void display_on_touch_state_refresh()
         divider_colon_to_display(true); // have a static time indidation.
         // set_display_indicator_dot((alarm_status_state == state_alarm_status_is_enabled));
     }
-    else if (button_menu.getEdgeUp() || button_up.getEdgeUp())
+    else if (button_menu.isUnpressedEdge() || button_up.isUnpressedEdge()|| button_extra.isUnpressedEdge())
     {
         // release button, clock light off
         visualsManager.setBlankDisplay();
@@ -1173,7 +1172,7 @@ void refresh_main_state()
     case state_night_mode:
     {
         // todo rework. this is not a good way. Dark mode should just skip visuals update, and if a button pressed, allow visual update until depressed.
-        display_on_touch_state_refresh();
+        dark_mode_refresh();
     }
     break;
     case state_alarm_set:
