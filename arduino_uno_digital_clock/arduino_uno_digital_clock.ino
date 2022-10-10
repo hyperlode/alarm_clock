@@ -46,10 +46,11 @@
 #endif
 
 #define PIN_DISPLAY_SEGMENT_F 13 // swapped!
-#define PIN_DISPLAY_SEGMENT_DP 4
 #define PIN_DISPLAY_SEGMENT_G 7 // swapped!
+#define PIN_DISPLAY_SEGMENT_DP 4
 
 #define PIN_BUZZER A0
+
 #define PIN_button_up A3
 #define PIN_button_down A2
 #define PIN_BUTTON_MENU A1
@@ -63,6 +64,8 @@
 #define ALARM_USER_STOP_BUTTON_PRESS_MILLIS 1000
 #define KITCHEN_TIMER_ENDED_PERIODICAL_BEEP_SECONDS 60
 #define SNOOZE_TIME_MINUTES 5
+
+#define PERIODICAL_EDGES_DELAY 2  // used to delay long press time. 0 = first long press period occurence, e.g. 5  = 5 long press periods delay
 
 DisplayManagement visualsManager;
 LedMultiplexer5x8 ledDisplay;
@@ -683,7 +686,7 @@ void alarm_set_state_refresh()
     break;
     case state_alarm_display:
     {
-        if (button_down.isPressedEdge() || ((button_up.getLongPressCount()==0) && button_up.getLongPressPeriodicalEdge()))
+        if (button_down.isPressedEdge() || ((button_up.getLongPressCount()==PERIODICAL_EDGES_DELAY) && button_up.getLongPressPeriodicalEdge()))
         {
 
             // state_alarm_status = state_alarm_status_toggle_active;
@@ -1017,7 +1020,7 @@ void kitchen_timer_state_refresh()
     break;
     case (state_stopped):
     {
-        if (button_menu.isPressedEdge())
+        if (button_menu.isPressedEdge() || ((button_extra.getLongPressCount()==PERIODICAL_EDGES_DELAY) && button_extra.getLongPressPeriodicalEdge()))
         {
             kitchen_timer_state = state_running;
             kitchenTimer.start();
@@ -1057,7 +1060,7 @@ void kitchen_timer_state_refresh()
         {
             main_state = state_display_time;
         }
-        else if (button_menu.isPressedEdge())
+        else if (button_menu.isPressedEdge() || ((button_extra.getLongPressCount()==PERIODICAL_EDGES_DELAY) && button_extra.getLongPressPeriodicalEdge()))
         {
             kitchenTimer.reset();
             kitchen_timer_state = state_stopped_refresh_display;
