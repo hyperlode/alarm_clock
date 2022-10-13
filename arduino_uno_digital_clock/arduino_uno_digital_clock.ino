@@ -46,7 +46,7 @@
 #endif
 
 #define PIN_DISPLAY_SEGMENT_F 13 // swapped!
-#define PIN_DISPLAY_SEGMENT_G 7 // swapped!
+#define PIN_DISPLAY_SEGMENT_G 7  // swapped!
 #define PIN_DISPLAY_SEGMENT_DP 4
 
 #define PIN_BUZZER A0
@@ -65,7 +65,7 @@
 #define KITCHEN_TIMER_ENDED_PERIODICAL_BEEP_SECONDS 60
 #define SNOOZE_TIME_MINUTES 5
 
-#define PERIODICAL_EDGES_DELAY 2  // used to delay long press time. 0 = first long press period occurence, e.g. 5  = 5 long press periods delay
+#define PERIODICAL_EDGES_DELAY 2 // used to delay long press time. 0 = first long press period occurence, e.g. 5  = 5 long press periods delay
 
 DisplayManagement visualsManager;
 LedMultiplexer5x8 ledDisplay;
@@ -376,18 +376,17 @@ void refresh_indicator_dot()
 
     // alarm going off or snoozed has priority
     if (alarm_status_state == state_alarm_status_snoozing || alarm_status_state == state_alarm_status_triggered)
-        {
-            set_display_indicator_dot((millis() % 250) > 125);
-        
-    }else
-    if (main_state == state_display_time)
+    {
+        set_display_indicator_dot((millis() % 250) > 125);
+    }
+    else if (main_state == state_display_time)
     {
         // set_display_indicator_dot(kitchenTimer.getInFirstGivenHundredsPartOfSecond(500));
         // if (alarm_status_state == state_alarm_status_snoozing)
         // {
         //     set_display_indicator_dot((millis() % 250) > 125);
         // }
-        // else 
+        // else
         if (kitchenTimer.getIsStarted())
         {
 
@@ -497,7 +496,7 @@ void set_time(Time_type t)
     if (button_up.isPressedEdge() || button_down.isPressedEdge() || button_up.getLongPressPeriodicalEdge() || button_down.getLongPressPeriodicalEdge())
     {
         rtc.read();
-        
+
         if (t == hours)
         {
             nextStepRotate(&rtc.hour, button_up.isPressed(), 0, 23);
@@ -691,7 +690,7 @@ void alarm_set_state_refresh()
     break;
     case state_alarm_display:
     {
-        if (button_down.isPressedEdge() || ((button_up.getLongPressCount()==PERIODICAL_EDGES_DELAY) && button_up.getLongPressPeriodicalEdge()))
+        if (button_down.isPressedEdge() || ((button_up.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_up.getLongPressPeriodicalEdge()))
         {
 
             // state_alarm_status = state_alarm_status_toggle_active;
@@ -730,7 +729,6 @@ void alarm_set_state_refresh()
         {
             alarm_set_state = state_alarm_end;
         }
-        
     }
     break;
     case state_alarm_set_hours:
@@ -1025,7 +1023,7 @@ void kitchen_timer_state_refresh()
     break;
     case (state_stopped):
     {
-        if (button_menu.isPressedEdge() || ((button_extra.getLongPressCount()==PERIODICAL_EDGES_DELAY) && button_extra.getLongPressPeriodicalEdge()))
+        if (button_menu.isPressedEdge() || ((button_extra.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_extra.getLongPressPeriodicalEdge()))
         {
             kitchen_timer_state = state_running;
             kitchenTimer.start();
@@ -1066,7 +1064,7 @@ void kitchen_timer_state_refresh()
         {
             main_state = state_display_time;
         }
-        else if (button_menu.isPressedEdge() || ((button_extra.getLongPressCount()==PERIODICAL_EDGES_DELAY) && button_extra.getLongPressPeriodicalEdge()))
+        else if (button_menu.isPressedEdge() || ((button_extra.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_extra.getLongPressPeriodicalEdge()))
         {
             kitchenTimer.reset();
             kitchen_timer_state = state_stopped_refresh_display;
@@ -1153,7 +1151,7 @@ void dark_mode_refresh()
         divider_colon_to_display(true); // have a static time indidation.
         // set_display_indicator_dot((alarm_status_state == state_alarm_status_is_enabled));
     }
-    else if (button_menu.isUnpressedEdge() || button_up.isUnpressedEdge()|| button_extra.isUnpressedEdge())
+    else if (button_menu.isUnpressedEdge() || button_up.isUnpressedEdge() || button_extra.isUnpressedEdge())
     {
         // release button, clock light off
         visualsManager.setBlankDisplay();
