@@ -373,16 +373,22 @@ void divider_colon_to_display(bool active)
 
 void refresh_indicator_dot()
 {
-    // depending on state
-    // if ((millis()%100))
+
+    // alarm going off or snoozed has priority
+    if (alarm_status_state == state_alarm_status_snoozing || alarm_status_state == state_alarm_status_triggered)
+        {
+            set_display_indicator_dot((millis() % 250) > 125);
+        
+    }else
     if (main_state == state_display_time)
     {
         // set_display_indicator_dot(kitchenTimer.getInFirstGivenHundredsPartOfSecond(500));
-        if (alarm_status_state == state_alarm_status_snoozing)
-        {
-            set_display_indicator_dot((millis() % 250) > 125);
-        }
-        else if (kitchenTimer.getIsStarted())
+        // if (alarm_status_state == state_alarm_status_snoozing)
+        // {
+        //     set_display_indicator_dot((millis() % 250) > 125);
+        // }
+        // else 
+        if (kitchenTimer.getIsStarted())
         {
 
             if (kitchenTimer.getTimeIsNegative())
@@ -428,7 +434,6 @@ void refresh_indicator_dot()
             set_display_indicator_dot(false);
         }
     }
-
     else
     {
         set_display_indicator_dot(false);
@@ -1024,6 +1029,7 @@ void kitchen_timer_state_refresh()
         {
             kitchen_timer_state = state_running;
             kitchenTimer.start();
+            buzzer.addNoteToNotesBuffer(G6_4);
         }
         if (millis() > nextKitchenBlinkUpdateMillis)
         {
@@ -1064,6 +1070,7 @@ void kitchen_timer_state_refresh()
         {
             kitchenTimer.reset();
             kitchen_timer_state = state_stopped_refresh_display;
+            buzzer.addNoteToNotesBuffer(C6_4);
         }
         else if (button_down.isPressedEdge() || button_up.isPressedEdge())
         {
