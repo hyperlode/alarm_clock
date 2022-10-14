@@ -15,19 +15,19 @@
 #define BRIGHTNESS_LEVELS 3
 #define DEFAULT_BRIGHTNESS_LEVEL_INDEX 3
 
-#define EEPROM_VALID_VALUE 66
+#define EEPROM_VALID_VALUE 68
 #define FACTORY_DEFAULT_KITCHEN_TIMER 10
 #define FACTORY_DEFAULT_SNOOZE_TIME_MINUTES 9
 #define FACTORY_DEFAULT_ALARM_HOUR 7
 #define FACTORY_DEFAULT_ALARM_MINUTE 30
+#define FACTORY_DEFAULT_HOURLY_BEEP_ENABLED 0
 
-#define EEPROM_ADDRESS_EEPROM_VALID 0 // 1 byte
+#define EEPROM_ADDRESS_EEPROM_VALID 0             // 1 byte
 #define EEPROM_ADDRESS_ALARM_HOUR 1               // 1 byte
 #define EEPROM_ADDRESS_ALARM_MINUTE 2             // 1 byte
 #define EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX 3 // 1 byte
-#define EEPROM_ADDRESS_SNOOZE_TIME_MINUTES 4 // 1 byte
-
-
+#define EEPROM_ADDRESS_SNOOZE_TIME_MINUTES 4      // 1 byte
+#define EEPROM_ADDRESS_HOURLY_BEEP_ENABLED 5      // 1 byte
 
 #define PIN_DUMMY 66
 #define PIN_DUMMY_2 22 // randomly chosen. I've had it set to 67, and at some point, multiple segments were lit up. This STILL is C hey, it's gonna chug on forever!
@@ -82,7 +82,6 @@
 #define ALARM_USER_STOP_BUTTON_PRESS_MILLIS 1000
 #define KITCHEN_TIMER_ENDED_PERIODICAL_BEEP_SECONDS 60
 
-
 #define PERIODICAL_EDGES_DELAY 2 // used to delay long press time. 0 = first long press period occurence, e.g. 5  = 5 long press periods delay
 
 DisplayManagement visualsManager;
@@ -110,7 +109,7 @@ bool display_dot_status_memory;
 
 long watchdog_last_button_press_millis;
 bool alarm_triggered_memory;
-
+bool hourly_beep_done_memory;
 uint8_t alarm_hour;
 uint8_t alarm_minute;
 uint8_t alarm_hour_snooze;
@@ -122,6 +121,7 @@ uint8_t snooze_count;
 
 uint8_t brightness_index;
 bool blinker;
+bool hourly_beep_enabled;
 
 uint8_t hour_now;
 uint8_t minute_now;
@@ -258,7 +258,6 @@ void set_blink_offset()
 
 void setup()
 {
-  
 
 #ifdef ENABLE_SERIAL
     Serial.begin(9600);
@@ -286,8 +285,10 @@ void setup()
     buzzer.setSpeedRatio(2);
 
     // check eeprom sanity. If new device, set values in eeprom
-    if (EEPROM.read(EEPROM_ADDRESS_EEPROM_VALID) != EEPROM_VALID_VALUE){
+    if (EEPROM.read(EEPROM_ADDRESS_EEPROM_VALID) != EEPROM_VALID_VALUE)
+    {
         EEPROM.write(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES, FACTORY_DEFAULT_SNOOZE_TIME_MINUTES);
+        EEPROM.write(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED, FACTORY_DEFAULT_HOURLY_BEEP_ENABLED);
         EEPROM.write(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX, FACTORY_DEFAULT_KITCHEN_TIMER);
         EEPROM.write(EEPROM_ADDRESS_ALARM_HOUR, FACTORY_DEFAULT_ALARM_HOUR);
         EEPROM.write(EEPROM_ADDRESS_ALARM_MINUTE, FACTORY_DEFAULT_ALARM_MINUTE);
@@ -297,14 +298,13 @@ void setup()
         buzzer.addNoteToNotesBuffer(E5_4);
         buzzer.addNoteToNotesBuffer(F5_8);
     }
-    
+
     // get eeprom values
     alarm_hour = EEPROM.read(EEPROM_ADDRESS_ALARM_HOUR);
     alarm_minute = EEPROM.read(EEPROM_ADDRESS_ALARM_MINUTE);
     alarm_snooze_duration_minutes = EEPROM.read(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES);
     kitchen_timer_set_time_index = EEPROM.read(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX);
-
-
+    hourly_beep_enabled = EEPROM.read(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED);
 
     nextTimeUpdateMillis = millis();
     nextBlinkUpdateMillis = millis();
@@ -313,7 +313,6 @@ void setup()
     cycleBrightness(true);
     main_state = state_display_time;
     alarm_set_state = state_alarm_init;
-
 
     kitchenTimer.setInitCountDownTimeSecs(timeDialDiscreteSeconds[kitchen_timer_set_time_index]);
     // kitchen_timer_state = state_stopped_refresh_display;
@@ -326,7 +325,7 @@ void setup()
 //   alarm_hour = rtc.hour;
 //   alarm_minute = rtc.minute + 1;
 #endif
-    
+
     snooze_count = 0;
 
     //   alarm_user_toggle_action = false;
@@ -727,7 +726,7 @@ void main_menu_state_refresh()
             break;
             case (MAIN_MENU_ITEM_ENABLE_HOURLY_BEEP):
             {
-                visualsManager.setBoolToDisplay(false);
+                visualsManager.setBoolToDisplay(hourly_beep_enabled);
             }
             break;
             default:
@@ -743,6 +742,7 @@ void main_menu_state_refresh()
         }
     }
     break;
+
     case (state_main_menu_modify_item):
     {
         if (button_exit.isPressedEdge())
@@ -753,7 +753,10 @@ void main_menu_state_refresh()
             {
                 EEPROM.write(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES, alarm_snooze_duration_minutes);
             }
-            
+            if (hourly_beep_enabled != EEPROM.read(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED))
+            {
+                EEPROM.write(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED, hourly_beep_enabled);
+            }
         }
 
         switch (main_menu_item_index)
@@ -777,13 +780,16 @@ void main_menu_state_refresh()
         break;
         case (MAIN_MENU_ITEM_ENABLE_HOURLY_BEEP):
         {
+            visualsManager.setBoolToDisplay(hourly_beep_enabled);
+            if (button_up.isPressedEdge() || button_down.isPressedEdge() || button_enter.isPressedEdge()){
+                hourly_beep_enabled = !hourly_beep_enabled;
+            }
         }
         break;
         default:
         {
         };
         }
-
     }
     break;
     default:
@@ -1402,6 +1408,22 @@ void checkWatchDog()
     }
 }
 
+void checkHourlyBeep()
+{
+    if (minute_now == 0 && !hourly_beep_done_memory)
+    {
+        if (hourly_beep_enabled)
+        {
+            buzzer.addNoteToNotesBuffer(C5_4);
+        }
+        hourly_beep_done_memory = true;
+    }
+    else
+    {
+        hourly_beep_done_memory = false;
+    }
+}
+
 void updateTimeNow()
 {
     if (millis() > nextTimeUpdateMillis)
@@ -1429,6 +1451,7 @@ void loop()
     // process
     updateTimeNow();
     checkWatchDog();
+    checkHourlyBeep();
     refresh_main_state();
     refresh_indicator_dot();
 
