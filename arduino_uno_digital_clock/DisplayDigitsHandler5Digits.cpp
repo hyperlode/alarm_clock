@@ -59,6 +59,14 @@ void DisplayManagement::setNumberToDisplay(int16_t number, boolean asHexadecimal
 	this->setTextBufToDisplay(text);
 }
 
+void DisplayManagement::setBoolToDisplay(bool value){
+    if (value){
+        setStandardTextToTextBuf(this->text, TEXT_YES);
+    }else{
+        setStandardTextToTextBuf(this->text, TEXT_NO);
+    }
+}
+
 void DisplayManagement::setBinaryToDisplay(uint32_t value) //updateDisplayAllBits
 {
 	// value has 32 bits, that's 4x 8 bits. so for four digits by 8 segements.  digit1: DP G F ..... A  , DIGIT 2 DP G ...., ...

@@ -15,11 +15,19 @@
 #define BRIGHTNESS_LEVELS 3
 #define DEFAULT_BRIGHTNESS_LEVEL_INDEX 3
 
-#define EEPROM_ADDRESS_ALARM_HOUR 0               // 1 byte
-#define EEPROM_ADDRESS_ALARM_MINUTE 1             // 1 byte
-#define EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX 2 // 1 byte
+#define EEPROM_VALID_VALUE 66
+#define FACTORY_DEFAULT_KITCHEN_TIMER 10
+#define FACTORY_DEFAULT_SNOOZE_TIME_MINUTES 9
+#define FACTORY_DEFAULT_ALARM_HOUR 7
+#define FACTORY_DEFAULT_ALARM_MINUTE 30
 
-#define KITCHEN_TIMER_DEFAULT_INDEX 10
+#define EEPROM_ADDRESS_EEPROM_VALID 0 // 1 byte
+#define EEPROM_ADDRESS_ALARM_HOUR 1               // 1 byte
+#define EEPROM_ADDRESS_ALARM_MINUTE 2             // 1 byte
+#define EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX 3 // 1 byte
+#define EEPROM_ADDRESS_SNOOZE_TIME_MINUTES 4 // 1 byte
+
+
 
 #define PIN_DUMMY 66
 #define PIN_DUMMY_2 22 // randomly chosen. I've had it set to 67, and at some point, multiple segments were lit up. This STILL is C hey, it's gonna chug on forever!
@@ -73,7 +81,7 @@
 #define DELAY_KITCHEN_TIMER_AUTO_ESCAPE_MILLIS 5000
 #define ALARM_USER_STOP_BUTTON_PRESS_MILLIS 1000
 #define KITCHEN_TIMER_ENDED_PERIODICAL_BEEP_SECONDS 60
-#define SNOOZE_TIME_MINUTES 5
+
 
 #define PERIODICAL_EDGES_DELAY 2 // used to delay long press time. 0 = first long press period occurence, e.g. 5  = 5 long press periods delay
 
@@ -107,7 +115,7 @@ uint8_t alarm_hour;
 uint8_t alarm_minute;
 uint8_t alarm_hour_snooze;
 uint8_t alarm_minute_snooze;
-uint8_t alarm_snooze_duration_minutes;
+int8_t alarm_snooze_duration_minutes;
 uint8_t snooze_count;
 
 // bool alarm_user_toggle_action;
@@ -141,6 +149,9 @@ const byte menu_item_titles[] PROGMEM = {
     'T', 'S', 'E', 'T',
     'S', 'N', 'O', 'O',
     'B', 'E', 'E', 'P'};
+#define MAIN_MENU_ITEM_TIME_SET 0
+#define MAIN_MENU_ITEM_SNOOZE_TIME 1
+#define MAIN_MENU_ITEM_ENABLE_HOURLY_BEEP 2
 
 enum Time_type : uint8_t
 {
@@ -247,6 +258,7 @@ void set_blink_offset()
 
 void setup()
 {
+  
 
 #ifdef ENABLE_SERIAL
     Serial.begin(9600);
@@ -273,6 +285,27 @@ void setup()
     buzzer.setPin(PIN_BUZZER);
     buzzer.setSpeedRatio(2);
 
+    // check eeprom sanity. If new device, set values in eeprom
+    if (EEPROM.read(EEPROM_ADDRESS_EEPROM_VALID) != EEPROM_VALID_VALUE){
+        EEPROM.write(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES, FACTORY_DEFAULT_SNOOZE_TIME_MINUTES);
+        EEPROM.write(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX, FACTORY_DEFAULT_KITCHEN_TIMER);
+        EEPROM.write(EEPROM_ADDRESS_ALARM_HOUR, FACTORY_DEFAULT_ALARM_HOUR);
+        EEPROM.write(EEPROM_ADDRESS_ALARM_MINUTE, FACTORY_DEFAULT_ALARM_MINUTE);
+        EEPROM.write(EEPROM_ADDRESS_EEPROM_VALID, EEPROM_VALID_VALUE);
+        buzzer.addNoteToNotesBuffer(C5_1);
+        buzzer.addNoteToNotesBuffer(D5_2);
+        buzzer.addNoteToNotesBuffer(E5_4);
+        buzzer.addNoteToNotesBuffer(F5_8);
+    }
+    
+    // get eeprom values
+    alarm_hour = EEPROM.read(EEPROM_ADDRESS_ALARM_HOUR);
+    alarm_minute = EEPROM.read(EEPROM_ADDRESS_ALARM_MINUTE);
+    alarm_snooze_duration_minutes = EEPROM.read(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES);
+    kitchen_timer_set_time_index = EEPROM.read(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX);
+
+
+
     nextTimeUpdateMillis = millis();
     nextBlinkUpdateMillis = millis();
     nextKitchenBlinkUpdateMillis = millis();
@@ -281,8 +314,7 @@ void setup()
     main_state = state_display_time;
     alarm_set_state = state_alarm_init;
 
-    // kitchen_timer_set_time_index = KITCHEN_TIMER_DEFAULT_INDEX;
-    kitchen_timer_set_time_index = EEPROM.read(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX);
+
     kitchenTimer.setInitCountDownTimeSecs(timeDialDiscreteSeconds[kitchen_timer_set_time_index]);
     // kitchen_timer_state = state_stopped_refresh_display;
     blink_offset = 0;
@@ -293,18 +325,8 @@ void setup()
 //   rtc.read();
 //   alarm_hour = rtc.hour;
 //   alarm_minute = rtc.minute + 1;
-#else
-
-    alarm_hour = EEPROM.read(EEPROM_ADDRESS_ALARM_HOUR);
-    alarm_minute = EEPROM.read(EEPROM_ADDRESS_ALARM_MINUTE);
-    if (alarm_hour == 0xff)
-    {
-        alarm_hour = 7;
-        alarm_minute = 0;
-    }
 #endif
-
-    alarm_snooze_duration_minutes = SNOOZE_TIME_MINUTES;
+    
     snooze_count = 0;
 
     //   alarm_user_toggle_action = false;
@@ -661,9 +683,15 @@ void main_menu_state_refresh()
         main_state = state_display_time;
     }
     break;
+
     case (state_main_menu_display_item):
     {
 
+        if (button_enter.isPressedEdge())
+        {
+
+            main_menu_state = state_main_menu_modify_item;
+        }
         if (button_exit.isPressedEdge())
         {
             main_menu_state = state_main_menu_exit;
@@ -672,12 +700,10 @@ void main_menu_state_refresh()
         {
             nextStepRotate(&main_menu_item_index, button_down.isPressed(), 0, MENU_MENU_ITEMS_COUNT - 1);
             main_menu_display_update = true;
-            // main_menu_item_value_update = true;
         }
 
         if (main_menu_display_update)
         {
-
             for (uint8_t i = 0; i < 4; i++)
             {
                 main_menu_text_buf[i] = pgm_read_byte_near(menu_item_titles + main_menu_item_index * 4 + i);
@@ -685,13 +711,79 @@ void main_menu_state_refresh()
             main_menu_display_update = false;
         }
 
-        if (millis_blink_250_750ms)
+        if (millis_blink_250_750ms())
         {
-            visualsManager.setTextBufToDisplay(main_menu_text_buf);
+            switch (main_menu_item_index)
+            {
+            case (MAIN_MENU_ITEM_TIME_SET):
+            {
+                hour_minutes_to_display();
+            }
+            break;
+            case (MAIN_MENU_ITEM_SNOOZE_TIME):
+            {
+                visualsManager.setNumberToDisplay(alarm_snooze_duration_minutes, false);
+            }
+            break;
+            case (MAIN_MENU_ITEM_ENABLE_HOURLY_BEEP):
+            {
+                visualsManager.setBoolToDisplay(false);
+            }
+            break;
+            default:
+            {
+                visualsManager.setNumberToDisplay(666, false);
+            };
+            }
         }
         else
         {
+            visualsManager.setTextBufToDisplay(main_menu_text_buf);
+            // visualsManager.setBoolToDisplay(true);
         }
+    }
+    break;
+    case (state_main_menu_modify_item):
+    {
+        if (button_exit.isPressedEdge())
+        {
+            main_menu_state = state_main_menu_display_item;
+
+            if (alarm_snooze_duration_minutes != EEPROM.read(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES))
+            {
+                EEPROM.write(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES, alarm_snooze_duration_minutes);
+            }
+            
+        }
+
+        switch (main_menu_item_index)
+        {
+        case (MAIN_MENU_ITEM_TIME_SET):
+        {
+        }
+        break;
+        case (MAIN_MENU_ITEM_SNOOZE_TIME):
+        {
+            // if (button_enter.isPressedEdge())
+            // {
+            //     main_menu_state = state_main_menu_exit;
+            // }
+            visualsManager.setNumberToDisplay(alarm_snooze_duration_minutes, false);
+            if (button_up.isPressedEdge() || button_down.isPressedEdge())
+            {
+                nextStep(&alarm_snooze_duration_minutes, button_up.isPressed(), 0, 127, false);
+            }
+        }
+        break;
+        case (MAIN_MENU_ITEM_ENABLE_HOURLY_BEEP):
+        {
+        }
+        break;
+        default:
+        {
+        };
+        }
+
     }
     break;
     default:

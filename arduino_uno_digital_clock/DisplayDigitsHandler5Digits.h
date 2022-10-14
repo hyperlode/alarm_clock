@@ -97,8 +97,8 @@ const byte selected_ascii_to_7seg_digit[] PROGMEM = {
 #define TEXT_SET 56
 #define TEXT_HEAD 60
 #define TEXT_TAIL 64
-#define TEXT_YES 68
-#define TEXT_NO 72
+#define TEXT_NO 68
+#define TEXT_YES 72
 #define MAJOR 76
 #define MINOR 80
 #define PENTATONIC 84
@@ -172,6 +172,7 @@ public:
 
     void setNumberToDisplayAsDecimal(int16_t number);               //updateDisplayNumber
     void setNumberToDisplay(int16_t number, boolean asHexadecimal); //updateDisplayNumber
+    void setBoolToDisplay(bool value); //updateDisplayNumber
 
     void setBinaryToDisplay(uint32_t value); //  updateDisplayAllBits
 
