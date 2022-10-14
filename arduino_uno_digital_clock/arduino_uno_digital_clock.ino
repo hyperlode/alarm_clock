@@ -134,15 +134,13 @@ const uint16_t timeDialDiscreteSeconds[] = {
 
 uint8_t main_menu_item_index;
 bool main_menu_display_update;
-char  main_menu_text_buf [4];
+char main_menu_text_buf[4];
 
 #define MENU_MENU_ITEMS_COUNT 3
 const byte menu_item_titles[] PROGMEM = {
     'T', 'S', 'E', 'T',
     'S', 'N', 'O', 'O',
-    'B', 'E', 'E', 'P'
-};
-
+    'B', 'E', 'E', 'P'};
 
 enum Time_type : uint8_t
 {
@@ -264,8 +262,7 @@ void setup()
     // rtc.adjustRtc(2017,6,19,1,12,7,0);  //Set time: 2017/6/19, Monday, 12:07:00
     // #define button_1 button_0
 
-
-    button_0.init(PIN_BUTTON_0); // red 
+    button_0.init(PIN_BUTTON_0); // red
     button_1.init(PIN_BUTTON_1); // green
     button_2.init(PIN_BUTTON_2); // white
     button_3.init(PIN_BUTTON_3); // blue
@@ -647,56 +644,60 @@ void display_time_state_refresh()
     }
 }
 
-void main_menu_state_refresh(){
-    switch (main_menu_state){
-        case(state_main_menu_init):{
-            main_menu_state = state_main_menu_display_item;
-            main_menu_item_index = 0;
+void main_menu_state_refresh()
+{
+    switch (main_menu_state)
+    {
+    case (state_main_menu_init):
+    {
+        main_menu_state = state_main_menu_display_item;
+        main_menu_item_index = 0;
+        main_menu_display_update = true;
+    }
+    break;
+    case (state_main_menu_exit):
+    {
+        main_menu_state = state_main_menu_init;
+        main_state = state_display_time;
+    }
+    break;
+    case (state_main_menu_display_item):
+    {
+
+        if (button_exit.isPressedEdge())
+        {
+            main_menu_state = state_main_menu_exit;
+        }
+        if (button_up.isPressedEdge() || button_down.isPressedEdge())
+        {
+            nextStepRotate(&main_menu_item_index, button_down.isPressed(), 0, MENU_MENU_ITEMS_COUNT - 1);
             main_menu_display_update = true;
+            // main_menu_item_value_update = true;
         }
-        break;
-        case(state_main_menu_exit):{
-            main_menu_state = state_main_menu_init;
-            main_state = state_display_time;
+
+        if (main_menu_display_update)
+        {
+
+            for (uint8_t i = 0; i < 4; i++)
+            {
+                main_menu_text_buf[i] = pgm_read_byte_near(menu_item_titles + main_menu_item_index * 4 + i);
+            }
+            main_menu_display_update = false;
         }
-        break;
-        case(state_main_menu_display_item):{
-            
-            
-            if (button_exit.isPressedEdge()){
-                main_menu_state = state_main_menu_exit; 
-            }
-            if (button_up.isPressedEdge() || button_down.isPressedEdge()){
-                nextStepRotate(&main_menu_item_index, button_down.isPressed(), 0, MENU_MENU_ITEMS_COUNT-1);
-                main_menu_display_update = true;
-                //main_menu_item_value_update = true;
-            }
 
-            if (main_menu_display_update){
-                
-                for (uint8_t i = 0; i < 4; i++)
-                {
-                    main_menu_text_buf[i] = pgm_read_byte_near(menu_item_titles + main_menu_item_index*4 + i);
-                }
-                main_menu_display_update = false;
-            }
-
-
-            if (millis_blink_250_750ms){
-                visualsManager.setTextBufToDisplay(main_menu_text_buf);
-
-            }else{
-
-            }
-
+        if (millis_blink_250_750ms)
+        {
+            visualsManager.setTextBufToDisplay(main_menu_text_buf);
         }
-        break;
-        default:
+        else
         {
         }
     }
-
-
+    break;
+    default:
+    {
+    }
+    }
 }
 void set_time_state_refresh()
 {
@@ -714,8 +715,6 @@ void set_time_state_refresh()
             nextBlinkUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
             minutes_seconds_to_display();
         }
-
-       
     }
     break;
     case state_set_time_hours:
@@ -754,7 +753,7 @@ void set_time_state_refresh()
         // Serial.println("State set to:");
         // Serial.println(set_time_state);
     }
-     if (button_exit.isPressedEdge())
+    if (button_exit.isPressedEdge())
     {
         set_time_state = state_set_time_end;
     }
@@ -899,9 +898,6 @@ void alarm_set_state_refresh()
     }
     break;
     }
-
-    
-    
 }
 
 void alarm_status_refresh()
