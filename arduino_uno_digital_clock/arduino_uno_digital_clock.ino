@@ -132,6 +132,18 @@ const uint16_t timeDialDiscreteSeconds[] = {
     18000, 19800, 21600, 23400, 25200, 27000, 28800, 30600, 32400, 34200,
     36000};
 
+uint8_t main_menu_item_index;
+bool main_menu_display_update;
+char  main_menu_text_buf [4];
+
+#define MENU_MENU_ITEMS_COUNT 3
+const byte menu_item_titles[] PROGMEM = {
+    'T', 'S', 'E', 'T',
+    'S', 'N', 'O', 'O',
+    'B', 'E', 'E', 'P'
+};
+
+
 enum Time_type : uint8_t
 {
     hours = 0,
@@ -145,7 +157,8 @@ enum Main_state : uint8_t
     state_set_time,
     state_night_mode,
     state_alarm_set,
-    state_kitchen_timer
+    state_kitchen_timer,
+    state_main_menu
 };
 Main_state main_state;
 
@@ -162,6 +175,16 @@ enum Kitchen_timer_state : uint8_t
 };
 Kitchen_timer_state kitchen_timer_state;
 // Kitchen_timer_state state_mem_tmp;
+
+enum Main_menu_state : uint8_t
+{
+    state_main_menu_init = 0,
+    state_main_menu_exit = 1,
+    state_main_menu_display_item = 2,
+    state_main_menu_modify_item = 3
+
+};
+Main_menu_state main_menu_state;
 
 enum Set_time_state : uint8_t
 {
@@ -212,11 +235,11 @@ Alarm_status_state alarm_status_state;
 //     return millis() % 500 > 250;
 // }
 
-// bool Apps::millis_blink_250_750ms()
-// {
-//     // true for shorter part of the second
-//     return (millis() - blink_offset) % 1000 > 750;
-// }
+bool millis_blink_250_750ms()
+{
+    // true for shorter part of the second
+    return (millis() - blink_offset) % 1000 > 750;
+}
 
 void set_blink_offset()
 {
@@ -624,6 +647,57 @@ void display_time_state_refresh()
     }
 }
 
+void main_menu_state_refresh(){
+    switch (main_menu_state){
+        case(state_main_menu_init):{
+            main_menu_state = state_main_menu_display_item;
+            main_menu_item_index = 0;
+            main_menu_display_update = true;
+        }
+        break;
+        case(state_main_menu_exit):{
+            main_menu_state = state_main_menu_init;
+            main_state = state_display_time;
+        }
+        break;
+        case(state_main_menu_display_item):{
+            
+            
+            if (button_exit.isPressedEdge()){
+                main_menu_state = state_main_menu_exit; 
+            }
+            if (button_up.isPressedEdge() || button_down.isPressedEdge()){
+                nextStepRotate(&main_menu_item_index, button_down.isPressed(), 0, MENU_MENU_ITEMS_COUNT-1);
+                main_menu_display_update = true;
+                //main_menu_item_value_update = true;
+            }
+
+            if (main_menu_display_update){
+                
+                for (uint8_t i = 0; i < 4; i++)
+                {
+                    main_menu_text_buf[i] = pgm_read_byte_near(menu_item_titles + main_menu_item_index*4 + i);
+                }
+                main_menu_display_update = false;
+            }
+
+
+            if (millis_blink_250_750ms){
+                visualsManager.setTextBufToDisplay(main_menu_text_buf);
+
+            }else{
+
+            }
+
+        }
+        break;
+        default:
+        {
+        }
+    }
+
+
+}
 void set_time_state_refresh()
 {
     switch (set_time_state)
@@ -1191,9 +1265,14 @@ void refresh_main_state()
     break;
     case state_set_time:
     {
-        set_time_state_refresh();
+        main_menu_state_refresh();
     }
     break;
+    // case state_set_time:
+    // {
+    //     set_time_state_refresh();
+    // }
+    // break;
     case state_night_mode:
     {
         // todo rework. this is not a good way. Dark mode should just skip visuals update, and if a button pressed, allow visual update until depressed.
