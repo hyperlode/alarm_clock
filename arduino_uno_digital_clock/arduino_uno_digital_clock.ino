@@ -123,6 +123,7 @@ uint8_t brightness_index;
 bool blinker;
 bool hourly_beep_enabled;
 
+int8_t time_set_index_helper;
 uint8_t hour_now;
 uint8_t minute_now;
 uint8_t second_now;
@@ -688,8 +689,8 @@ void main_menu_state_refresh()
 
         if (button_enter.isPressedEdge())
         {
-
             main_menu_state = state_main_menu_modify_item;
+            time_set_index_helper = 0;
         }
         if (button_exit.isPressedEdge())
         {
@@ -763,6 +764,29 @@ void main_menu_state_refresh()
         {
         case (MAIN_MENU_ITEM_TIME_SET):
         {
+            switch (time_set_index_helper)
+            {
+            case 0:
+            {
+                set_time(hours);
+            }
+            break;
+
+            case 1:
+            {
+                set_time(minutes);
+            }
+            break;
+            case 2:
+            {
+                set_time(seconds);
+            }
+            break;
+            }
+            if (button_enter.isPressedEdge())
+            {
+                nextStepRotate(&time_set_index_helper, true, 0, 2);
+            };
         }
         break;
         case (MAIN_MENU_ITEM_SNOOZE_TIME):
@@ -781,7 +805,8 @@ void main_menu_state_refresh()
         case (MAIN_MENU_ITEM_ENABLE_HOURLY_BEEP):
         {
             visualsManager.setBoolToDisplay(hourly_beep_enabled);
-            if (button_up.isPressedEdge() || button_down.isPressedEdge() || button_enter.isPressedEdge()){
+            if (button_up.isPressedEdge() || button_down.isPressedEdge() || button_enter.isPressedEdge())
+            {
                 hourly_beep_enabled = !hourly_beep_enabled;
             }
         }
@@ -1414,14 +1439,11 @@ void checkHourlyBeep()
     {
         if (hourly_beep_enabled)
         {
-            buzzer.addNoteToNotesBuffer(C5_4);
+            buzzer.addNoteToNotesBuffer(E8_8);
         }
-        hourly_beep_done_memory = true;
     }
-    else
-    {
-        hourly_beep_done_memory = false;
-    }
+
+    hourly_beep_done_memory = (minute_now == 0);
 }
 
 void updateTimeNow()
