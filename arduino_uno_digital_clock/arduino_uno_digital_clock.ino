@@ -7,7 +7,7 @@
 #include <EEPROM.h>
 #include "SuperTimer.h"
 
-// #define ENABLE_SERIAL
+#define ENABLE_SERIAL
 
 #define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 1 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
 
@@ -79,6 +79,8 @@
 #define TIME_HALF_BLINK_PERIOD_MILLIS 250
 #define DELAY_ALARM_AUTO_ESCAPE_MILLIS 5000
 #define DELAY_KITCHEN_TIMER_AUTO_ESCAPE_MILLIS 5000
+#define MAIN_MENU_MODIFY_ITEMS_AUTO_ESCAPE_MILLIS 10000
+#define MAIN_MENU_DISPLAY_ITEMS_AUTO_ESCAPE_MILLIS 5000
 #define ALARM_USER_STOP_BUTTON_PRESS_MILLIS 1000
 #define KITCHEN_TIMER_ENDED_PERIODICAL_BEEP_SECONDS 60
 
@@ -692,7 +694,7 @@ void main_menu_state_refresh()
             main_menu_state = state_main_menu_modify_item;
             time_set_index_helper = 0;
         }
-        if (button_exit.isPressedEdge())
+        if (button_exit.isPressedEdge() || (millis() > watchdog_last_button_press_millis + MAIN_MENU_DISPLAY_ITEMS_AUTO_ESCAPE_MILLIS))
         {
             main_menu_state = state_main_menu_exit;
         }
@@ -746,7 +748,7 @@ void main_menu_state_refresh()
 
     case (state_main_menu_modify_item):
     {
-        if (button_exit.isPressedEdge())
+        if (button_exit.isPressedEdge()  || (millis() > watchdog_last_button_press_millis + MAIN_MENU_MODIFY_ITEMS_AUTO_ESCAPE_MILLIS))
         {
             main_menu_state = state_main_menu_display_item;
 
@@ -900,8 +902,14 @@ void alarm_set_state_refresh()
     break;
     case state_alarm_display:
     {
+        if (button_alarm.getLongPressPeriodicalEdge()){
+            Serial.println(button_alarm.getLongPressCount());
+
+        }
+
         if (button_down.isPressedEdge() || button_up.isPressedEdge() || ((button_alarm.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_alarm.getLongPressPeriodicalEdge()))
         {
+        // Serial.println(PERIODICAL_EDGES_DELAY);
 
             // state_alarm_status = state_alarm_status_toggle_active;
             // alarm_user_toggle_action = true;
@@ -1420,14 +1428,21 @@ void refresh_main_state()
 void checkWatchDog()
 {
     if (
-        button_1.getValueChanged() ||
-        button_2.getValueChanged() ||
-        button_0.getValueChanged() ||
-        button_3.getValueChanged() ||
-        button_1.getLongPressPeriodicalEdge() ||
-        button_2.getLongPressPeriodicalEdge() ||
-        button_0.getLongPressPeriodicalEdge() ||
-        button_3.getLongPressPeriodicalEdge())
+        // button_0.getValueChanged() ||
+        // button_1.getValueChanged() ||
+        // button_2.getValueChanged() ||
+        // button_3.getValueChanged() ||
+        // button_0.getLongPressPeriodicalEdge() ||
+        // button_1.getLongPressPeriodicalEdge() ||
+        // button_2.getLongPressPeriodicalEdge() ||
+        // button_3.getLongPressPeriodicalEdge()
+        
+        button_0.isPressed() ||
+        button_1.isPressed() ||
+        button_2.isPressed() ||
+        button_3.isPressed()
+        
+        )
     {
         watchdog_last_button_press_millis = millis();
     }
