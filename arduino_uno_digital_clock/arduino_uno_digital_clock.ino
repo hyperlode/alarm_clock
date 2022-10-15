@@ -748,7 +748,7 @@ void main_menu_state_refresh()
 
     case (state_main_menu_modify_item):
     {
-        if (button_exit.isPressedEdge()  || (millis() > watchdog_last_button_press_millis + MAIN_MENU_MODIFY_ITEMS_AUTO_ESCAPE_MILLIS))
+        if (button_exit.isPressedEdge() || (millis() > watchdog_last_button_press_millis + MAIN_MENU_MODIFY_ITEMS_AUTO_ESCAPE_MILLIS))
         {
             main_menu_state = state_main_menu_display_item;
 
@@ -887,23 +887,55 @@ void set_time_state_refresh()
 void alarm_set_state_refresh()
 {
 
-    if (button_exit.isPressedEdge() || millis() > watchdog_last_button_press_millis + DELAY_ALARM_AUTO_ESCAPE_MILLIS)
+    if (millis() > watchdog_last_button_press_millis + DELAY_ALARM_AUTO_ESCAPE_MILLIS)
     {
         alarm_set_state = state_alarm_end;
+    }
+
+    if (button_exit.isPressedEdge() || ((button_alarm.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_alarm.getLongPressPeriodicalEdge()))
+    {
+        // Serial.println(PERIODICAL_EDGES_DELAY);
+
+        // state_alarm_status = state_alarm_status_toggle_active;
+        // alarm_user_toggle_action = true;
+
+        switch (alarm_status_state)
+        {
+        case state_alarm_status_is_not_enabled:
+        {
+            alarm_status_state = state_alarm_status_enable;
+        }
+        break;
+
+        case state_alarm_status_is_enabled:
+        {
+            alarm_status_state = state_alarm_status_disable;
+        }
+        break;
+        case state_alarm_status_snoozing:
+        {
+            alarm_status_state = state_alarm_status_disable;
+        }
+        break;
+        default:
+        {
+            // Serial.println("ASSERT ERROR: alarm state not expected");
+        }
+        break;
+        }
     }
 
     switch (alarm_set_state)
     {
     case state_alarm_init:
     {
-        alarm_set_state = state_alarm_display;
+        alarm_set_state = state_alarm_set_hours;
+        // alarm_set_state = state_alarm_display;
         display_alarm();
     }
     break;
     case state_alarm_display:
     {
-
-
         if (button_down.isPressedEdge() || button_up.isPressedEdge() || ((button_alarm.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_alarm.getLongPressPeriodicalEdge()))
         {
         // Serial.println(PERIODICAL_EDGES_DELAY);
@@ -940,10 +972,10 @@ void alarm_set_state_refresh()
         {
             alarm_set_state = state_alarm_set_hours;
         }
-        // if (button_alarm.isPressedEdge())
-        // {
-        //     alarm_set_state = state_alarm_end;
-        // }
+        if (button_alarm.isPressedEdge())
+        {
+            alarm_set_state = state_alarm_end;
+        }
     }
     break;
     case state_alarm_set_hours:
@@ -987,7 +1019,8 @@ void alarm_set_state_refresh()
         if (button_alarm.isPressedEdge())
         {
             display_alarm();
-            alarm_set_state = state_alarm_display;
+            // alarm_set_state = state_alarm_display;
+            alarm_set_state = state_alarm_end;
         }
         if (millis() > nextBlinkUpdateMillis)
         {
@@ -1433,13 +1466,13 @@ void checkWatchDog()
         // button_1.getLongPressPeriodicalEdge() ||
         // button_2.getLongPressPeriodicalEdge() ||
         // button_3.getLongPressPeriodicalEdge()
-        
+
         button_0.isPressed() ||
         button_1.isPressed() ||
         button_2.isPressed() ||
         button_3.isPressed()
-        
-        )
+
+    )
     {
         watchdog_last_button_press_millis = millis();
     }
