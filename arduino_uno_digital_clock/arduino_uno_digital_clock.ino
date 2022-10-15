@@ -21,6 +21,8 @@
 #define FACTORY_DEFAULT_ALARM_HOUR 7
 #define FACTORY_DEFAULT_ALARM_MINUTE 30
 #define FACTORY_DEFAULT_HOURLY_BEEP_ENABLED 0
+#define FACTORY_DEFAULT_ALARM_SET_MEMORY 0
+#define FACTORY_DEFAULT_ALARM_IS_SNOOZING 0
 
 #define EEPROM_ADDRESS_EEPROM_VALID 0             // 1 byte
 #define EEPROM_ADDRESS_ALARM_HOUR 1               // 1 byte
@@ -28,6 +30,8 @@
 #define EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX 3 // 1 byte
 #define EEPROM_ADDRESS_SNOOZE_TIME_MINUTES 4      // 1 byte
 #define EEPROM_ADDRESS_HOURLY_BEEP_ENABLED 5      // 1 byte
+#define EEPROM_ADDRESS_ALARM_SET_MEMORY 6         // 1 byte
+#define EEPROM_ADDRESS_ALARM_IS_SNOOZING 7        // 1 byte
 
 #define PIN_DUMMY 66
 #define PIN_DUMMY_2 22 // randomly chosen. I've had it set to 67, and at some point, multiple segments were lit up. This STILL is C hey, it's gonna chug on forever!
@@ -79,8 +83,8 @@
 #define TIME_HALF_BLINK_PERIOD_MILLIS 250
 #define DELAY_ALARM_AUTO_ESCAPE_MILLIS 5000
 #define DELAY_KITCHEN_TIMER_AUTO_ESCAPE_MILLIS 5000
-#define MAIN_MENU_MODIFY_ITEMS_AUTO_ESCAPE_MILLIS 10000
-#define MAIN_MENU_DISPLAY_ITEMS_AUTO_ESCAPE_MILLIS 5000
+#define MAIN_MENU_DISPLAY_ITEMS_AUTO_ESCAPE_MILLIS 8000
+#define MAIN_MENU_MODIFY_ITEMS_AUTO_ESCAPE_MILLIS 4000
 #define ALARM_USER_STOP_BUTTON_PRESS_MILLIS 1000
 #define KITCHEN_TIMER_ENDED_PERIODICAL_BEEP_SECONDS 60
 
@@ -110,7 +114,6 @@ long blink_offset;
 bool display_dot_status_memory;
 
 long watchdog_last_button_press_millis;
-bool alarm_triggered_memory;
 bool hourly_beep_done_memory;
 uint8_t alarm_hour;
 uint8_t alarm_minute;
@@ -276,10 +279,10 @@ void setup()
     // rtc.adjustRtc(2017,6,19,1,12,7,0);  //Set time: 2017/6/19, Monday, 12:07:00
     // #define button_1 button_0
 
-    button_0.init(PIN_BUTTON_0); // red
-    button_1.init(PIN_BUTTON_1); // green
-    button_2.init(PIN_BUTTON_2); // white
-    button_3.init(PIN_BUTTON_3); // blue
+    button_0.init(PIN_BUTTON_0);
+    button_1.init(PIN_BUTTON_1);
+    button_2.init(PIN_BUTTON_2);
+    button_3.init(PIN_BUTTON_3);
 
     ledDisplay.Begin(DISPLAY_IS_COMMON_ANODE, PIN_DISPLAY_DIGIT_0, PIN_DISPLAY_DIGIT_1, PIN_DISPLAY_DIGIT_2, PIN_DISPLAY_DIGIT_3, PIN_DISPLAY_DIGIT_BUTTON_LIGHTS, PIN_DISPLAY_SEGMENT_A, PIN_DISPLAY_SEGMENT_B, PIN_DISPLAY_SEGMENT_C, PIN_DISPLAY_SEGMENT_D, PIN_DISPLAY_SEGMENT_E, PIN_DISPLAY_SEGMENT_F, PIN_DISPLAY_SEGMENT_G, PIN_DISPLAY_SEGMENT_DP);
     visualsManager.setMultiplexerBuffer(ledDisplay.getDigits());
@@ -292,10 +295,12 @@ void setup()
     {
         EEPROM.write(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES, FACTORY_DEFAULT_SNOOZE_TIME_MINUTES);
         EEPROM.write(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED, FACTORY_DEFAULT_HOURLY_BEEP_ENABLED);
+        EEPROM.write(EEPROM_ADDRESS_ALARM_SET_MEMORY, FACTORY_DEFAULT_ALARM_SET_MEMORY);
         EEPROM.write(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX, FACTORY_DEFAULT_KITCHEN_TIMER);
         EEPROM.write(EEPROM_ADDRESS_ALARM_HOUR, FACTORY_DEFAULT_ALARM_HOUR);
         EEPROM.write(EEPROM_ADDRESS_ALARM_MINUTE, FACTORY_DEFAULT_ALARM_MINUTE);
         EEPROM.write(EEPROM_ADDRESS_EEPROM_VALID, EEPROM_VALID_VALUE);
+        EEPROM.write(EEPROM_ADDRESS_ALARM_IS_SNOOZING, FACTORY_DEFAULT_ALARM_IS_SNOOZING);
         buzzer.addNoteToNotesBuffer(C5_1);
         buzzer.addNoteToNotesBuffer(D5_2);
         buzzer.addNoteToNotesBuffer(E5_4);
@@ -308,6 +313,24 @@ void setup()
     alarm_snooze_duration_minutes = EEPROM.read(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES);
     kitchen_timer_set_time_index = EEPROM.read(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX);
     hourly_beep_enabled = EEPROM.read(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED);
+    uint8_t is_snoozing = EEPROM.read(EEPROM_ADDRESS_ALARM_IS_SNOOZING);
+
+    uint8_t alarm_enabled = EEPROM.read(EEPROM_ADDRESS_ALARM_SET_MEMORY);
+
+    if (alarm_enabled > 64)
+    {
+        alarm_status_state = state_alarm_status_is_enabled;
+    }
+    else
+    {
+        alarm_status_state = state_alarm_status_is_not_enabled;
+    }
+
+    if (is_snoozing > 64)
+    {
+        // if power cut during snoozing, trigger alarm right away at power on.
+        alarm_status_state = state_alarm_status_triggered;
+    }
 
     nextTimeUpdateMillis = millis();
     nextBlinkUpdateMillis = millis();
@@ -330,9 +353,6 @@ void setup()
 #endif
 
     snooze_count = 0;
-
-    //   alarm_user_toggle_action = false;
-    alarm_status_state = state_alarm_status_is_not_enabled;
 
     uint8_t test[32];
     rtc.readMemory(test);
@@ -894,11 +914,6 @@ void alarm_set_state_refresh()
 
     if (button_exit.isPressedEdge() || ((button_alarm.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_alarm.getLongPressPeriodicalEdge()))
     {
-        // Serial.println(PERIODICAL_EDGES_DELAY);
-
-        // state_alarm_status = state_alarm_status_toggle_active;
-        // alarm_user_toggle_action = true;
-
         switch (alarm_status_state)
         {
         case state_alarm_status_is_not_enabled:
@@ -938,7 +953,7 @@ void alarm_set_state_refresh()
     {
         if (button_down.isPressedEdge() || button_up.isPressedEdge() || ((button_alarm.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_alarm.getLongPressPeriodicalEdge()))
         {
-        // Serial.println(PERIODICAL_EDGES_DELAY);
+            // Serial.println(PERIODICAL_EDGES_DELAY);
 
             // state_alarm_status = state_alarm_status_toggle_active;
             // alarm_user_toggle_action = true;
@@ -1076,7 +1091,15 @@ void alarm_status_refresh()
         alarm_status_state = state_alarm_status_is_not_enabled;
         // set_display_indicator_dot(false);
         snooze_count = 0;
-        // Serial.println("Disable alarm");
+        if (0 != EEPROM.read(EEPROM_ADDRESS_ALARM_SET_MEMORY))
+        {
+            EEPROM.write(EEPROM_ADDRESS_ALARM_SET_MEMORY, 0);
+        }
+        
+        if (0 != EEPROM.read(EEPROM_ADDRESS_ALARM_IS_SNOOZING))
+        {
+            EEPROM.write(EEPROM_ADDRESS_ALARM_IS_SNOOZING, 0);
+        }
     }
     break;
 
@@ -1092,6 +1115,11 @@ void alarm_status_refresh()
         // set_display_indicator_dot(true);
         snooze_count = 0;
         // Serial.println("Enable alarm");
+
+        if (255 != EEPROM.read(EEPROM_ADDRESS_ALARM_SET_MEMORY))
+        {
+            EEPROM.write(EEPROM_ADDRESS_ALARM_SET_MEMORY, 255);
+        }
     }
     break;
 
@@ -1169,9 +1197,10 @@ void alarm_status_refresh()
 
     case (state_alarm_status_triggered):
     {
-        if (button_1.getValueChanged() ||
-            button_2.getValueChanged() ||
-            button_0.getValueChanged())
+        if (button_menu.getValueChanged() ||
+            button_brightness.getValueChanged() ||
+            button_alarm.getValueChanged() ||
+            button_kitchen_timer.getValueChanged())
         {
             // set snooze time
             snooze_count++;
@@ -1181,8 +1210,11 @@ void alarm_status_refresh()
             alarm_hour_snooze = time_stamp_minutes / 60;
             alarm_minute_snooze = time_stamp_minutes % 60;
 
-            // alarm_sounding = false;
             alarm_status_state = state_alarm_status_snoozing;
+            if (255 != EEPROM.read(EEPROM_ADDRESS_ALARM_IS_SNOOZING))
+            {
+                EEPROM.write(EEPROM_ADDRESS_ALARM_IS_SNOOZING, 255);
+            }
         }
 
         // add notes when buffer empty and alarm ringing
@@ -1205,6 +1237,7 @@ void alarm_status_refresh()
         {
             snooze_count = 0;
             alarm_status_state = state_alarm_status_disable;
+            
         }
 
         // set_display_indicator_dot((millis() % 500) > 250);
@@ -1384,20 +1417,13 @@ void dark_mode_refresh()
 
     if (button_brightness.isPressedEdge())
     {
-        // Serial.println("back to state display time");
         main_state = state_display_time;
-        // hour_minutes_to_display();
-        // set_display_indicator_dot((alarm_status_state == state_alarm_status_is_enabled));
-        //  Serial.println(brightness);
     }
     else if (button_kitchen_timer.isPressedEdge() || button_alarm.isPressedEdge() || button_menu.isPressedEdge())
     {
         // press button, time is displayed
-        // rtc.read();
-        // divider_colon_to_display(rtc.second % 2);
         hour_minutes_to_display();
         divider_colon_to_display(true); // have a static time indidation.
-        // set_display_indicator_dot((alarm_status_state == state_alarm_status_is_enabled));
     }
     else if (button_kitchen_timer.isUnpressedEdge() || button_alarm.isUnpressedEdge() || button_menu.isUnpressedEdge())
     {
