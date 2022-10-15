@@ -902,10 +902,7 @@ void alarm_set_state_refresh()
     break;
     case state_alarm_display:
     {
-        if (button_alarm.getLongPressPeriodicalEdge()){
-            Serial.println(button_alarm.getLongPressCount());
 
-        }
 
         if (button_down.isPressedEdge() || button_up.isPressedEdge() || ((button_alarm.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_alarm.getLongPressPeriodicalEdge()))
         {
@@ -1241,7 +1238,7 @@ void kitchen_timer_state_refresh()
     break;
     case (state_stopped):
     {
-        if (button_enter.isPressedEdge() || ((button_3.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_kitchen_timer.getLongPressPeriodicalEdge()))
+        if (button_enter.isPressedEdge() || ((button_kitchen_timer.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_kitchen_timer.getLongPressPeriodicalEdge()))
         {
             kitchen_timer_state = state_running;
             kitchenTimer.start();

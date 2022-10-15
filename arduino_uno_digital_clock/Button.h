@@ -31,6 +31,7 @@ class Button: public BinaryInput{
 
     long longPressStartMillis;
     int16_t longPressEdgeCount;
+    bool long_press_edge_detected=false;
 
   private:
     int pin;
