@@ -7,7 +7,7 @@
 #include <EEPROM.h>
 #include "SuperTimer.h"
 
-#define ENABLE_SERIAL
+// #define ENABLE_SERIAL
 
 #define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 1 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
 
@@ -64,15 +64,15 @@
 #define PIN_BUTTON_0 A1
 #define PIN_BUTTON_3 2
 
-#define button_down button_0
-#define button_up button_1
-#define button_enter button_3
-#define button_exit button_2
+#define button_down button_2
+#define button_up button_3
+#define button_exit button_1
+#define button_enter button_0
 
-#define button_menu button_0
-#define button_brightness button_1
-#define button_alarm button_3
-#define button_kitchen_timer button_2
+#define button_menu button_3
+#define button_brightness button_2
+#define button_kitchen_timer button_1
+#define button_alarm button_0
 
 #define TIME_UPDATE_DELAY 1000
 #define DOT_UPDATE_DELAY 250
@@ -1357,7 +1357,7 @@ void dark_mode_refresh()
         // set_display_indicator_dot((alarm_status_state == state_alarm_status_is_enabled));
         //  Serial.println(brightness);
     }
-    else if (button_0.isPressedEdge() || button_2.isPressedEdge() || button_3.isPressedEdge())
+    else if (button_kitchen_timer.isPressedEdge() || button_alarm.isPressedEdge() || button_menu.isPressedEdge())
     {
         // press button, time is displayed
         // rtc.read();
@@ -1366,7 +1366,7 @@ void dark_mode_refresh()
         divider_colon_to_display(true); // have a static time indidation.
         // set_display_indicator_dot((alarm_status_state == state_alarm_status_is_enabled));
     }
-    else if (button_0.isUnpressedEdge() || button_2.isUnpressedEdge() || button_3.isUnpressedEdge())
+    else if (button_kitchen_timer.isUnpressedEdge() || button_alarm.isUnpressedEdge() || button_menu.isUnpressedEdge())
     {
         // release button, clock light off
         visualsManager.setBlankDisplay();
