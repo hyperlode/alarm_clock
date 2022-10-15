@@ -657,11 +657,23 @@ void display_time_state_refresh()
     //
     //   }
 
+
+    
     if (millis() > nextDisplayTimeUpdateMillis)
     {
         nextDisplayTimeUpdateMillis = millis() + TIME_UPDATE_DELAY;
 
         hour_minutes_to_display();
+    }
+
+    if (button_alarm.isPressedEdge())
+    {
+        main_state = state_alarm_set;
+    }
+
+    if (alarm_status_state == state_alarm_status_triggered){
+        // key presses for non alarm functions only serve to quiet down the alarm when it's going off.
+        return;
     }
 
     if (button_menu.isPressedEdge())
@@ -677,15 +689,11 @@ void display_time_state_refresh()
         main_state = state_kitchen_timer;
     }
 
-    if (button_alarm.isPressedEdge())
-    {
-        main_state = state_alarm_set;
-    }
-
     if (button_brightness.isPressedEdge())
     {
         cycleBrightness(false);
     }
+
 }
 
 void main_menu_state_refresh()
@@ -1435,9 +1443,7 @@ void dark_mode_refresh()
 void refresh_main_state()
 {
 
-    // alarm FSM runs independently
-    alarm_status_refresh();
-    alarm_kitchen_timer_refresh();
+   
 
     switch (main_state)
     {
@@ -1547,6 +1553,8 @@ void loop()
     checkHourlyBeep();
     refresh_main_state();
     refresh_indicator_dot();
+    alarm_status_refresh(); //needs to go after main state loop (to check for button press at time of alarm triggered not doing normal alarm function)
+    alarm_kitchen_timer_refresh();
 
     // output
     buzzer.checkAndPlayNotesBuffer();
