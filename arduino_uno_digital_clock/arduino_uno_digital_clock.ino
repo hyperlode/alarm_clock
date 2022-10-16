@@ -23,6 +23,7 @@
 #define FACTORY_DEFAULT_HOURLY_BEEP_ENABLED 0
 #define FACTORY_DEFAULT_ALARM_SET_MEMORY 0
 #define FACTORY_DEFAULT_ALARM_IS_SNOOZING 0
+#define FACTORY_DEFAULT_ALARM_ENABLE_SNOOZE_TIME_DECREASE 0
 
 #define EEPROM_ADDRESS_EEPROM_VALID 0             // 1 byte
 #define EEPROM_ADDRESS_ALARM_HOUR 1               // 1 byte
@@ -32,6 +33,8 @@
 #define EEPROM_ADDRESS_HOURLY_BEEP_ENABLED 5      // 1 byte
 #define EEPROM_ADDRESS_ALARM_SET_MEMORY 6         // 1 byte
 #define EEPROM_ADDRESS_ALARM_IS_SNOOZING 7        // 1 byte
+#define EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE 8 // 1 byte
+
 
 #define PIN_DUMMY 66
 #define PIN_DUMMY_2 22 // randomly chosen. I've had it set to 67, and at some point, multiple segments were lit up. This STILL is C hey, it's gonna chug on forever!
@@ -121,12 +124,14 @@ uint8_t alarm_hour_snooze;
 uint8_t alarm_minute_snooze;
 int8_t alarm_snooze_duration_minutes;
 uint8_t snooze_count;
+uint16_t total_snooze_time_minutes;
 
 // bool alarm_user_toggle_action;
 
 uint8_t brightness_index;
 bool blinker;
 bool hourly_beep_enabled;
+bool enable_snooze_time_decrease;
 
 int8_t time_set_index_helper;
 uint8_t hour_now;
@@ -150,14 +155,17 @@ uint8_t main_menu_item_index;
 bool main_menu_display_update;
 char main_menu_text_buf[4];
 
-#define MENU_MENU_ITEMS_COUNT 3
+#define MENU_MENU_ITEMS_COUNT 4
 const byte menu_item_titles[] PROGMEM = {
     'T', 'S', 'E', 'T',
     'S', 'N', 'O', 'O',
-    'B', 'E', 'E', 'P'};
+    'B', 'E', 'E', 'P',
+    'D', 'E', 'C', 'R'
+    };
 #define MAIN_MENU_ITEM_TIME_SET 0
 #define MAIN_MENU_ITEM_SNOOZE_TIME 1
 #define MAIN_MENU_ITEM_ENABLE_HOURLY_BEEP 2
+#define MAIN_MENU_ITEM_ENABLE_SNOOZE_TIME_DECREASE 3
 
 enum Time_type : uint8_t
 {
@@ -301,6 +309,7 @@ void setup()
         EEPROM.write(EEPROM_ADDRESS_ALARM_MINUTE, FACTORY_DEFAULT_ALARM_MINUTE);
         EEPROM.write(EEPROM_ADDRESS_EEPROM_VALID, EEPROM_VALID_VALUE);
         EEPROM.write(EEPROM_ADDRESS_ALARM_IS_SNOOZING, FACTORY_DEFAULT_ALARM_IS_SNOOZING);
+        EEPROM.write(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE, FACTORY_DEFAULT_ALARM_ENABLE_SNOOZE_TIME_DECREASE);
         buzzer.addNoteToNotesBuffer(C5_1);
         buzzer.addNoteToNotesBuffer(D5_2);
         buzzer.addNoteToNotesBuffer(E5_4);
@@ -313,6 +322,7 @@ void setup()
     alarm_snooze_duration_minutes = EEPROM.read(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES);
     kitchen_timer_set_time_index = EEPROM.read(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX);
     hourly_beep_enabled = EEPROM.read(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED);
+    enable_snooze_time_decrease = EEPROM.read(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE);
     uint8_t is_snoozing = EEPROM.read(EEPROM_ADDRESS_ALARM_IS_SNOOZING);
 
     uint8_t alarm_enabled = EEPROM.read(EEPROM_ADDRESS_ALARM_SET_MEMORY);
@@ -353,6 +363,7 @@ void setup()
 #endif
 
     snooze_count = 0;
+    total_snooze_time_minutes = 0;
 
     uint8_t test[32];
     rtc.readMemory(test);
@@ -760,6 +771,11 @@ void main_menu_state_refresh()
                 visualsManager.setBoolToDisplay(hourly_beep_enabled);
             }
             break;
+            case (MAIN_MENU_ITEM_ENABLE_SNOOZE_TIME_DECREASE):
+            {
+                visualsManager.setBoolToDisplay(enable_snooze_time_decrease);
+            }
+            break;
             default:
             {
                 visualsManager.setNumberToDisplay(666, false);
@@ -787,6 +803,10 @@ void main_menu_state_refresh()
             if (hourly_beep_enabled != EEPROM.read(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED))
             {
                 EEPROM.write(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED, hourly_beep_enabled);
+            }
+            if (enable_snooze_time_decrease != EEPROM.read(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE))
+            {
+                EEPROM.write(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE, enable_snooze_time_decrease);
             }
         }
 
@@ -838,6 +858,15 @@ void main_menu_state_refresh()
             if (button_up.isPressedEdge() || button_down.isPressedEdge() || button_enter.isPressedEdge())
             {
                 hourly_beep_enabled = !hourly_beep_enabled;
+            }
+        }
+        break;
+        case (MAIN_MENU_ITEM_ENABLE_SNOOZE_TIME_DECREASE):
+        {
+            visualsManager.setBoolToDisplay(enable_snooze_time_decrease);
+            if (button_up.isPressedEdge() || button_down.isPressedEdge() || button_enter.isPressedEdge())
+            {
+                enable_snooze_time_decrease = !enable_snooze_time_decrease;
             }
         }
         break;
@@ -1099,6 +1128,7 @@ void alarm_status_refresh()
         alarm_status_state = state_alarm_status_is_not_enabled;
         // set_display_indicator_dot(false);
         snooze_count = 0;
+        total_snooze_time_minutes = 0;
         if (0 != EEPROM.read(EEPROM_ADDRESS_ALARM_SET_MEMORY))
         {
             EEPROM.write(EEPROM_ADDRESS_ALARM_SET_MEMORY, 0);
@@ -1122,6 +1152,7 @@ void alarm_status_refresh()
         alarm_status_state = state_alarm_status_is_enabled;
         // set_display_indicator_dot(true);
         snooze_count = 0;
+        total_snooze_time_minutes = 0;
         // Serial.println("Enable alarm");
 
         if (255 != EEPROM.read(EEPROM_ADDRESS_ALARM_SET_MEMORY))
@@ -1213,7 +1244,18 @@ void alarm_status_refresh()
             // set snooze time
             snooze_count++;
             long time_stamp_minutes = 60 * alarm_hour + alarm_minute;
-            time_stamp_minutes += (alarm_snooze_duration_minutes * snooze_count);
+
+            if (enable_snooze_time_decrease){
+                int8_t snooze_time_increment = (alarm_snooze_duration_minutes - (snooze_count-1));
+                if (snooze_time_increment < 1){
+                    // minimum one minute snoozing.
+                    snooze_time_increment = 1;
+                }
+                total_snooze_time_minutes += snooze_time_increment;
+            }else{
+                total_snooze_time_minutes += alarm_snooze_duration_minutes * snooze_count;
+            }
+            time_stamp_minutes += (total_snooze_time_minutes);
             time_stamp_minutes %= 24 * 60;
             alarm_hour_snooze = time_stamp_minutes / 60;
             alarm_minute_snooze = time_stamp_minutes % 60;
@@ -1243,7 +1285,6 @@ void alarm_status_refresh()
         if (button_alarm.isPressed() &&
             millis() > (button_alarm.getLastStateChangeMillis() + ALARM_USER_STOP_BUTTON_PRESS_MILLIS))
         {
-            snooze_count = 0;
             alarm_status_state = state_alarm_status_disable;
             
         }
