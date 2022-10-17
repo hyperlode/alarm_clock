@@ -155,17 +155,19 @@ uint8_t main_menu_item_index;
 bool main_menu_display_update;
 char main_menu_text_buf[4];
 
-#define MENU_MENU_ITEMS_COUNT 4
+#define MENU_MENU_ITEMS_COUNT 5
 const byte menu_item_titles[] PROGMEM = {
     'T', 'S', 'E', 'T',
     'S', 'N', 'O', 'O',
     'B', 'E', 'E', 'P',
-    'D', 'E', 'C', 'R'
+    'D', 'E', 'C', 'R',
+    'S', 'O', 'N', 'G'
     };
 #define MAIN_MENU_ITEM_TIME_SET 0
 #define MAIN_MENU_ITEM_SNOOZE_TIME 1
 #define MAIN_MENU_ITEM_ENABLE_HOURLY_BEEP 2
 #define MAIN_MENU_ITEM_ENABLE_SNOOZE_TIME_DECREASE 3
+#define MAIN_MENU_ITEM_SONG 4
 
 enum Time_type : uint8_t
 {
@@ -310,6 +312,7 @@ void setup()
         EEPROM.write(EEPROM_ADDRESS_EEPROM_VALID, EEPROM_VALID_VALUE);
         EEPROM.write(EEPROM_ADDRESS_ALARM_IS_SNOOZING, FACTORY_DEFAULT_ALARM_IS_SNOOZING);
         EEPROM.write(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE, FACTORY_DEFAULT_ALARM_ENABLE_SNOOZE_TIME_DECREASE);
+        // EEPROM.write(EEPROM_ADDRESS_ALARM_SOUND, FACTORY_DEFAULT_ALARM_ENABLE_SNOOZE_TIME_DECREASE);
         buzzer.addNoteToNotesBuffer(C5_1);
         buzzer.addNoteToNotesBuffer(D5_2);
         buzzer.addNoteToNotesBuffer(E5_4);
@@ -1253,7 +1256,7 @@ void alarm_status_refresh()
                 }
                 total_snooze_time_minutes += snooze_time_increment;
             }else{
-                total_snooze_time_minutes += alarm_snooze_duration_minutes * snooze_count;
+                total_snooze_time_minutes = alarm_snooze_duration_minutes * snooze_count;
             }
             time_stamp_minutes += (total_snooze_time_minutes);
             time_stamp_minutes %= 24 * 60;
