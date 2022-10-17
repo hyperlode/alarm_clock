@@ -1405,7 +1405,7 @@ void kitchen_timer_state_refresh()
         }
         else if (button_up.isPressedEdge() || button_down.isPressedEdge())
         {
-            kitchenTimer.setOffsetInitTimeMillis((1 - 2 * button_up.isPressed()) * 60000);
+            kitchenTimer.setOffsetInitTimeMillis((1 - 2 * button_down.isPressed()) * 60000);
             kitchen_timer_state = state_running_refresh_display;
         }
     }
