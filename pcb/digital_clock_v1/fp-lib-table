@@ -1,0 +1,5 @@
+(fp_lib_table
+  (lib (name "digital_clock")(type "KiCad")(uri "E:/GIT/Arduino repos/arduino_uno_digital_clock/pcb/components/digital_clock.pretty")(options "")(descr ""))
+  (lib (name "Luciebox")(type "KiCad")(uri "E:/GIT/Arduino repos/luciebox/pcb/Luciebox_v4/Luciebox_components/Luciebox.pretty")(options "")(descr ""))
+  (lib (name "Lucieboxv3")(type "KiCad")(uri "E:/GIT/Arduino repos/luciebox/pcb/Luciebox/Luciebox_components/Luciebox.pretty")(options "")(descr ""))
+)

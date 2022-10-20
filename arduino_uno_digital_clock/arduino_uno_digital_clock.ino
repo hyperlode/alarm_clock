@@ -10,12 +10,11 @@
 // #define ENABLE_SERIAL
 
 #define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 1 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
-
-#define DISPLAY_IS_COMMON_ANODE true // check led displays both displays should be of same type   //also set in SevSeg5Digits.h : MODEISCOMMONANODE
+#define DISPLAY_IS_COMMON_ANODE true           // check led displays both displays should be of same type   //also set in SevSeg5Digits.h : MODEISCOMMONANODE
 #define BRIGHTNESS_LEVELS 3
 #define DEFAULT_BRIGHTNESS_LEVEL_INDEX 3
 
-#define EEPROM_VALID_VALUE 68
+#define EEPROM_VALID_VALUE 67
 #define FACTORY_DEFAULT_KITCHEN_TIMER 10
 #define FACTORY_DEFAULT_SNOOZE_TIME_MINUTES 9
 #define FACTORY_DEFAULT_ALARM_HOUR 7
@@ -24,17 +23,18 @@
 #define FACTORY_DEFAULT_ALARM_SET_MEMORY 0
 #define FACTORY_DEFAULT_ALARM_IS_SNOOZING 0
 #define FACTORY_DEFAULT_ALARM_ENABLE_SNOOZE_TIME_DECREASE 0
+#define FACTORY_DEFAULT_ALARM_TUNE 0
 
-#define EEPROM_ADDRESS_EEPROM_VALID 0             // 1 byte
-#define EEPROM_ADDRESS_ALARM_HOUR 1               // 1 byte
-#define EEPROM_ADDRESS_ALARM_MINUTE 2             // 1 byte
-#define EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX 3 // 1 byte
-#define EEPROM_ADDRESS_SNOOZE_TIME_MINUTES 4      // 1 byte
-#define EEPROM_ADDRESS_HOURLY_BEEP_ENABLED 5      // 1 byte
-#define EEPROM_ADDRESS_ALARM_SET_MEMORY 6         // 1 byte
-#define EEPROM_ADDRESS_ALARM_IS_SNOOZING 7        // 1 byte
+#define EEPROM_ADDRESS_EEPROM_VALID 0                      // 1 byte
+#define EEPROM_ADDRESS_ALARM_HOUR 1                        // 1 byte
+#define EEPROM_ADDRESS_ALARM_MINUTE 2                      // 1 byte
+#define EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX 3          // 1 byte
+#define EEPROM_ADDRESS_SNOOZE_TIME_MINUTES 4               // 1 byte
+#define EEPROM_ADDRESS_HOURLY_BEEP_ENABLED 5               // 1 byte
+#define EEPROM_ADDRESS_ALARM_SET_MEMORY 6                  // 1 byte
+#define EEPROM_ADDRESS_ALARM_IS_SNOOZING 7                 // 1 byte
 #define EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE 8 // 1 byte
-
+#define EEPROM_ADDRESS_ALARM_TUNE 9                        // 1 byte
 
 #define PIN_DUMMY 66
 #define PIN_DUMMY_2 22 // randomly chosen. I've had it set to 67, and at some point, multiple segments were lit up. This STILL is C hey, it's gonna chug on forever!
@@ -53,10 +53,8 @@
 #define PIN_DISPLAY_SEGMENT_D 3
 
 #ifdef ENABLE_SERIAL
-
 #define PIN_DISPLAY_SEGMENT_E PIN_DUMMY
 #else
-
 #define PIN_DISPLAY_SEGMENT_E 0
 #endif
 
@@ -90,7 +88,6 @@
 #define MAIN_MENU_MODIFY_ITEMS_AUTO_ESCAPE_MILLIS 4000
 #define ALARM_USER_STOP_BUTTON_PRESS_MILLIS 1000
 #define KITCHEN_TIMER_ENDED_PERIODICAL_BEEP_SECONDS 60
-
 #define PERIODICAL_EDGES_DELAY 2 // used to delay long press time. 0 = first long press period occurence, e.g. 5  = 5 long press periods delay
 
 DisplayManagement visualsManager;
@@ -103,8 +100,8 @@ Button button_0;
 Button button_3;
 
 Buzzer buzzer;
-
 SuperTimer kitchenTimer;
+
 bool kitchenTimerCountingDownMemory;
 bool beep_memory;
 
@@ -125,8 +122,8 @@ uint8_t alarm_minute_snooze;
 int8_t alarm_snooze_duration_minutes;
 uint8_t snooze_count;
 uint16_t total_snooze_time_minutes;
-
-// bool alarm_user_toggle_action;
+int8_t alarm_tune_index;
+char tune_name_buf[4];
 
 uint8_t brightness_index;
 bool blinker;
@@ -161,13 +158,76 @@ const byte menu_item_titles[] PROGMEM = {
     'S', 'N', 'O', 'O',
     'B', 'E', 'E', 'P',
     'D', 'E', 'C', 'R',
-    'S', 'O', 'N', 'G'
-    };
+    'T', 'U', 'N', 'E'};
 #define MAIN_MENU_ITEM_TIME_SET 0
 #define MAIN_MENU_ITEM_SNOOZE_TIME 1
 #define MAIN_MENU_ITEM_ENABLE_HOURLY_BEEP 2
 #define MAIN_MENU_ITEM_ENABLE_SNOOZE_TIME_DECREASE 3
-#define MAIN_MENU_ITEM_SONG 4
+#define MAIN_MENU_ITEM_TUNE 4
+#define TUNES_COUNT 5
+
+#define LEN_TUNE_DRYER_HAPPY 12
+#define LEN_TUNE_ATTACK 13
+#define LEN_TUNE_DRYER_UNHAPPY 11
+#define LEN_TUNE_RETREAT 14
+#define LEN_TUNE_ALPHABET 77
+uint8_t tune_lengths[] = {LEN_TUNE_DRYER_HAPPY, LEN_TUNE_ATTACK, LEN_TUNE_DRYER_UNHAPPY, LEN_TUNE_RETREAT, LEN_TUNE_ALPHABET};
+
+const byte menu_item_tune_names[] PROGMEM = {
+    'F', 'U', 'N', ' ',
+    'A', 'T', 'A', 'C',
+    'B', 'L', 'A', 'H',
+    'R', 'E', 'T', 'R',
+    'A', 'L', 'F', 'A'};
+
+#define TUNE_DRYER_HAPPY 0
+#define TUNE_ATTACK 1
+#define TUNE_DRYER_UNHAPPY 2
+#define TUNE_RETREAT 3
+#define TUNE_ALPHABET 4
+
+// https://forum.arduino.cc/t/multi-dimensional-array-in-progmem-arduino-noob/45822/2
+// const uint8_t tunes[][100] PROGMEM = {
+//     {,,},
+//     {,,}
+// };
+// byte firstnoteof song = pgm_read_byte(&(tunes[song_index][0]));
+
+// one big library. tune lengths in separate array. This is the easiest option.
+const uint8_t tune_dryer_happy[] PROGMEM = {
+    // happy dryer
+    A6_2, REST_6_8,
+    Cs7_2, REST_6_8,
+    E7_4, REST_3_8,
+    Cs7_4, REST_3_8,
+    E7_4, REST_3_8,
+    A7_1, A7_1};
+
+const uint8_t tune_attack[] PROGMEM = {
+    // aaanvallueeeeee!
+    Gs6_2, REST_2_8, Gs6_2, REST_2_8, Gs6_2, REST_2_8, Cs7_2, REST_8_8, Gs6_2, REST_2_8, Cs7_1, Cs7_1, Cs7_1};
+
+const uint8_t tune_dryer_unhappy[] PROGMEM = {
+    // unhappy dryer
+    A6_1, REST_4_8, Cs7_1, REST_4_8, E7_2, REST_2_8, Cs7_2, REST_2_8, B6_2, REST_2_8, A6_1};
+
+const uint8_t tune_retreat[] PROGMEM = {
+    // retreat tune
+    Gs6_2, REST_2_8, Gs6_2, REST_2_8, Gs6_2, REST_2_8, Gs6_2, REST_4_8, REST_4_8, Gs6_2, REST_2_8, Cs6_1, Cs6_1, Cs6_1};
+
+const uint8_t tune_alphabet[] PROGMEM = {
+    // alphabet tune
+    C7_2, REST_12_8,
+    C7_2, REST_12_8,
+    G7_2, REST_12_8,
+    G7_2, REST_12_8,
+    A7_2, REST_12_8,
+    A7_2, REST_12_8,
+    G7_1, G7_1, REST_15_8,
+    F7_2, REST_12_8, F7_2, REST_12_8, E7_2, REST_12_8, E7_2, REST_12_8, D7_2, REST_4_8, D7_2, REST_4_8, D7_2, REST_4_8, D7_2, REST_4_8, C7_1, C7_1, REST_15_8,
+    G7_2, REST_12_8, G7_2, REST_12_8, F7_2, REST_12_8, F7_2, REST_12_8, E7_2, REST_12_8, E7_2, REST_12_8, D7_1, D7_1, REST_15_8, C7_2, REST_12_8,
+    C7_2, REST_12_8, G7_2, REST_12_8, G7_2, REST_12_8, A7_1, A7_1, REST_15_8, G7_2, REST_13_8, REST_15_8,
+    F7_2, REST_12_8, F7_2, REST_12_8, E7_2, REST_12_8, E7_2, REST_12_8, D7_2, REST_12_8, G7_2, REST_12_8, C7_1, C7_1};
 
 enum Time_type : uint8_t
 {
@@ -312,7 +372,7 @@ void setup()
         EEPROM.write(EEPROM_ADDRESS_EEPROM_VALID, EEPROM_VALID_VALUE);
         EEPROM.write(EEPROM_ADDRESS_ALARM_IS_SNOOZING, FACTORY_DEFAULT_ALARM_IS_SNOOZING);
         EEPROM.write(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE, FACTORY_DEFAULT_ALARM_ENABLE_SNOOZE_TIME_DECREASE);
-        // EEPROM.write(EEPROM_ADDRESS_ALARM_SOUND, FACTORY_DEFAULT_ALARM_ENABLE_SNOOZE_TIME_DECREASE);
+        EEPROM.write(EEPROM_ADDRESS_ALARM_TUNE, FACTORY_DEFAULT_ALARM_TUNE);
         buzzer.addNoteToNotesBuffer(C5_1);
         buzzer.addNoteToNotesBuffer(D5_2);
         buzzer.addNoteToNotesBuffer(E5_4);
@@ -327,9 +387,12 @@ void setup()
     hourly_beep_enabled = EEPROM.read(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED);
     enable_snooze_time_decrease = EEPROM.read(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE);
     uint8_t is_snoozing = EEPROM.read(EEPROM_ADDRESS_ALARM_IS_SNOOZING);
-
     uint8_t alarm_enabled = EEPROM.read(EEPROM_ADDRESS_ALARM_SET_MEMORY);
-
+    alarm_tune_index = EEPROM.read(EEPROM_ADDRESS_ALARM_TUNE);
+    for (uint8_t i = 0; i < 4; i++)
+    {
+        tune_name_buf[i] = pgm_read_byte_near(menu_item_tune_names + 4 * alarm_tune_index + i);
+    }
     if (alarm_enabled > 64)
     {
         alarm_status_state = state_alarm_status_is_enabled;
@@ -671,8 +734,6 @@ void display_time_state_refresh()
     //
     //   }
 
-
-    
     if (millis() > nextDisplayTimeUpdateMillis)
     {
         nextDisplayTimeUpdateMillis = millis() + TIME_UPDATE_DELAY;
@@ -685,7 +746,8 @@ void display_time_state_refresh()
         main_state = state_alarm_set;
     }
 
-    if (alarm_status_state == state_alarm_status_triggered){
+    if (alarm_status_state == state_alarm_status_triggered)
+    {
         // key presses for non alarm functions only serve to quiet down the alarm when it's going off.
         return;
     }
@@ -707,7 +769,6 @@ void display_time_state_refresh()
     {
         cycleBrightness(false);
     }
-
 }
 
 void main_menu_state_refresh()
@@ -773,6 +834,11 @@ void main_menu_state_refresh()
             {
                 visualsManager.setBoolToDisplay(hourly_beep_enabled);
             }
+            case (MAIN_MENU_ITEM_TUNE):
+            {
+
+                visualsManager.setTextBufToDisplay(tune_name_buf);
+            }
             break;
             case (MAIN_MENU_ITEM_ENABLE_SNOOZE_TIME_DECREASE):
             {
@@ -811,6 +877,10 @@ void main_menu_state_refresh()
             {
                 EEPROM.write(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE, enable_snooze_time_decrease);
             }
+            if (alarm_tune_index != EEPROM.read(EEPROM_ADDRESS_ALARM_TUNE))
+            {
+                EEPROM.write(EEPROM_ADDRESS_ALARM_TUNE, alarm_tune_index);
+            }
         }
 
         switch (main_menu_item_index)
@@ -840,6 +910,20 @@ void main_menu_state_refresh()
             {
                 nextStepRotate(&time_set_index_helper, true, 0, 2);
             };
+        }
+        break;
+        case (MAIN_MENU_ITEM_TUNE):
+        {
+            if (button_up.isPressedEdge(), button_down.isPressedEdge() || button_enter.isPressedEdge())
+            {
+                nextStepRotate(&alarm_tune_index, true, 0, TUNES_COUNT - 1);
+
+                for (uint8_t i = 0; i < 4; i++)
+                {
+                    tune_name_buf[i] = pgm_read_byte_near(menu_item_tune_names + 4 * alarm_tune_index + i);
+                }
+            }
+            visualsManager.setTextBufToDisplay(tune_name_buf);
         }
         break;
         case (MAIN_MENU_ITEM_SNOOZE_TIME):
@@ -1136,7 +1220,7 @@ void alarm_status_refresh()
         {
             EEPROM.write(EEPROM_ADDRESS_ALARM_SET_MEMORY, 0);
         }
-        
+
         if (0 != EEPROM.read(EEPROM_ADDRESS_ALARM_IS_SNOOZING))
         {
             EEPROM.write(EEPROM_ADDRESS_ALARM_IS_SNOOZING, 0);
@@ -1248,15 +1332,19 @@ void alarm_status_refresh()
             snooze_count++;
             long time_stamp_minutes = 60 * alarm_hour + alarm_minute;
 
-            if (enable_snooze_time_decrease){
-                int8_t snooze_time_increment = (alarm_snooze_duration_minutes - (snooze_count-1));
-                if (snooze_time_increment < 1){
+            if (enable_snooze_time_decrease)
+            {
+                int8_t snooze_time_increment = (alarm_snooze_duration_minutes - (snooze_count - 1));
+                if (snooze_time_increment < 1)
+                {
                     // minimum one minute snoozing.
                     snooze_time_increment = 1;
                 }
                 total_snooze_time_minutes += snooze_time_increment;
-            }else{
-                total_snooze_time_minutes = alarm_snooze_duration_minutes * snooze_count;
+            }
+            else
+            {
+                total_snooze_time_minutes += alarm_snooze_duration_minutes;
             }
             time_stamp_minutes += (total_snooze_time_minutes);
             time_stamp_minutes %= 24 * 60;
@@ -1268,14 +1356,70 @@ void alarm_status_refresh()
             {
                 EEPROM.write(EEPROM_ADDRESS_ALARM_IS_SNOOZING, 255);
             }
-        }
 
-        // add notes when buffer empty and alarm ringing
-        if (buzzer.getBuzzerNotesBufferEmpty())
-        {
-            buzzer.addNoteToNotesBuffer(C6_1);
-            buzzer.addNoteToNotesBuffer(REST_2_8);
+            buzzer.clearBuzzerNotesBuffer();
         }
+        else // make sure to add else if here, otherwise buffer does not stay empty ast snooze press..
+
+            // add notes when buffer empty and alarm ringing
+            if (buzzer.getBuzzerNotesBufferEmpty())
+            {
+
+                switch (alarm_tune_index)
+                {
+                case (TUNE_DRYER_HAPPY):
+                {
+                    for (uint8_t i = 0; i < tune_lengths[alarm_tune_index]; i++)
+                    {
+                        byte note = pgm_read_byte_near(tune_dryer_happy + 4 * alarm_tune_index + i);
+                        buzzer.addNoteToNotesBuffer(note);
+                    }
+                }
+                break;
+                case (TUNE_ATTACK):
+                {
+                    for (uint8_t i = 0; i < tune_lengths[alarm_tune_index]; i++)
+                    {
+                        byte note = pgm_read_byte_near(tune_attack + 4 * alarm_tune_index + i);
+                        buzzer.addNoteToNotesBuffer(note);
+                    }
+                }
+                break;
+                case (TUNE_RETREAT):
+                {
+                    for (uint8_t i = 0; i < tune_lengths[alarm_tune_index]; i++)
+                    {
+                        byte note = pgm_read_byte_near(tune_retreat + 4 * alarm_tune_index + i);
+                        buzzer.addNoteToNotesBuffer(note);
+                    }
+                }
+                break;
+                case (TUNE_ALPHABET):
+                {
+                    for (uint8_t i = 0; i < tune_lengths[alarm_tune_index]; i++)
+                    {
+                        byte note = pgm_read_byte_near(tune_alphabet + 4 * alarm_tune_index + i);
+                        buzzer.addNoteToNotesBuffer(note);
+                    }
+                }
+                break;
+                case (TUNE_DRYER_UNHAPPY):
+                {
+                    for (uint8_t i = 0; i < tune_lengths[alarm_tune_index]; i++)
+                    {
+                        byte note = pgm_read_byte_near(tune_dryer_unhappy + 4 * alarm_tune_index + i);
+                        buzzer.addNoteToNotesBuffer(note);
+                    }
+                }
+                break;
+                default:
+                {
+                    buzzer.addNoteToNotesBuffer(C6_1);
+                    buzzer.addNoteToNotesBuffer(REST_2_8);
+                }
+                break;
+                };
+            }
     }
     break;
 
@@ -1289,7 +1433,6 @@ void alarm_status_refresh()
             millis() > (button_alarm.getLastStateChangeMillis() + ALARM_USER_STOP_BUTTON_PRESS_MILLIS))
         {
             alarm_status_state = state_alarm_status_disable;
-            
         }
 
         // set_display_indicator_dot((millis() % 500) > 250);
@@ -1442,7 +1585,7 @@ void alarm_kitchen_timer_refresh()
     long kitchen_timer_beep = (kitchenTimer.getTimeSeconds() % KITCHEN_TIMER_ENDED_PERIODICAL_BEEP_SECONDS) == 0;
     if (!kitchenTimer.getTimeIsNegative() && kitchenTimerCountingDownMemory)
     {
-        uint8_t song_happy_dryer[] = {A6_2, REST_6_8,
+        uint8_t tune_happy_dryer[] = {A6_2, REST_6_8,
                                       Cs7_2, REST_6_8,
                                       E7_4, REST_3_8,
                                       Cs7_4, REST_3_8,
@@ -1450,7 +1593,7 @@ void alarm_kitchen_timer_refresh()
                                       A7_1, A7_1};
         for (uint8_t i = 0; i < 12; i++)
         {
-            buzzer.addNoteToNotesBuffer(song_happy_dryer[i]);
+            buzzer.addNoteToNotesBuffer(tune_happy_dryer[i]);
         }
     }
     else if (!kitchenTimer.getTimeIsNegative())
@@ -1486,8 +1629,6 @@ void dark_mode_refresh()
 
 void refresh_main_state()
 {
-
-   
 
     switch (main_state)
     {
@@ -1534,21 +1675,10 @@ void refresh_main_state()
 void checkWatchDog()
 {
     if (
-        // button_0.getValueChanged() ||
-        // button_1.getValueChanged() ||
-        // button_2.getValueChanged() ||
-        // button_3.getValueChanged() ||
-        // button_0.getLongPressPeriodicalEdge() ||
-        // button_1.getLongPressPeriodicalEdge() ||
-        // button_2.getLongPressPeriodicalEdge() ||
-        // button_3.getLongPressPeriodicalEdge()
-
         button_0.isPressed() ||
         button_1.isPressed() ||
         button_2.isPressed() ||
-        button_3.isPressed()
-
-    )
+        button_3.isPressed())
     {
         watchdog_last_button_press_millis = millis();
     }
@@ -1597,7 +1727,7 @@ void loop()
     checkHourlyBeep();
     refresh_main_state();
     refresh_indicator_dot();
-    alarm_status_refresh(); //needs to go after main state loop (to check for button press at time of alarm triggered not doing normal alarm function)
+    alarm_status_refresh(); // needs to go after main state loop (to check for button press at time of alarm triggered not doing normal alarm function)
     alarm_kitchen_timer_refresh();
 
     // output
