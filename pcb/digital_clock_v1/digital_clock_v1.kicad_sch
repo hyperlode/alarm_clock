@@ -4506,7 +4506,7 @@
     (uuid a1ca69cd-817d-4f8b-ab26-4c311a7c46df)
     (property "Reference" "U3" (id 0) (at 76.2 71.9582 0))
     (property "Value" "CA56-12SRWA" (id 1) (at 76.2 74.2696 0))
-    (property "Footprint" "Luciebox:CA56-12SRWA" (id 2) (at 76.2 104.14 0)
+    (property "Footprint" "Lucieboxv3:CA56-12SRWA" (id 2) (at 76.2 104.14 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "http://www.kingbrightusa.com/images/catalog/SPEC/CA56-12SRWA.pdf" (id 3) (at 65.278 88.138 0)
@@ -5309,7 +5309,7 @@
       (reference "U2") (unit 1) (value "SD2405AL") (footprint "digital_clock:SD2405AL")
     )
     (path "/a1ca69cd-817d-4f8b-ab26-4c311a7c46df"
-      (reference "U3") (unit 1) (value "CA56-12SRWA") (footprint "Luciebox:CA56-12SRWA")
+      (reference "U3") (unit 1) (value "CA56-12SRWA") (footprint "Lucieboxv3:CA56-12SRWA")
     )
     (path "/dd927aef-0d69-4bac-b16b-5b63d94e7773"
       (reference "U4") (unit 1) (value "ATmega328P-A") (footprint "Package_QFP:TQFP-32_7x7mm_P0.8mm")

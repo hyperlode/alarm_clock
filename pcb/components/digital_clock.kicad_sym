@@ -52,7 +52,7 @@
     (property "Value" "4digit_7segments_common_anode_CA56-12SRWA" (id 1) (at 17.78 13.97 0)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "Luciebox_components:7segments_4digits_display_CA56-12SRWA" (id 2) (at 0 -15.24 0)
+    (property "Footprint" "Lucieboxv3:CA56-12SRWA" (id 2) (at 0 -15.24 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "http://www.kingbrightusa.com/images/catalog/SPEC/CA56-12SRWA.pdf" (id 3) (at -10.922 0.762 0)
