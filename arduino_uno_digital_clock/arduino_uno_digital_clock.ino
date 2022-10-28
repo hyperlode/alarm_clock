@@ -778,8 +778,9 @@ void main_menu_state_refresh()
     case (state_main_menu_init):
     {
         main_menu_state = state_main_menu_display_item;
-        main_menu_item_index = 0;
+        // main_menu_item_index = 0;
         main_menu_display_update = true;
+        divider_colon_to_display(false);
     }
     break;
     case (state_main_menu_exit):
@@ -805,6 +806,7 @@ void main_menu_state_refresh()
         {
             nextStepRotate(&main_menu_item_index, button_down.isPressed(), 0, MENU_MENU_ITEMS_COUNT - 1);
             main_menu_display_update = true;
+            set_blink_offset();
         }
 
         if (main_menu_display_update)
@@ -823,6 +825,7 @@ void main_menu_state_refresh()
             case (MAIN_MENU_ITEM_TIME_SET):
             {
                 hour_minutes_to_display();
+                divider_colon_to_display(true);
             }
             break;
             case (MAIN_MENU_ITEM_SNOOZE_TIME):
@@ -855,6 +858,7 @@ void main_menu_state_refresh()
         else
         {
             visualsManager.setTextBufToDisplay(main_menu_text_buf);
+            divider_colon_to_display(false);
             // visualsManager.setBoolToDisplay(true);
         }
     }
@@ -1396,61 +1400,62 @@ void alarm_status_refresh()
     }
 }
 
-void play_tune(uint8_t tune_index){
+void play_tune(uint8_t tune_index)
+{
     switch (tune_index)
-                {
-                case (TUNE_DRYER_HAPPY):
-                {
-                    for (uint8_t i = 0; i < tune_lengths[tune_index]; i++)
-                    {
-                        byte note = pgm_read_byte_near(tune_dryer_happy + i);
-                        buzzer.addNoteToNotesBuffer(note);
-                    }
-                }
-                break;
-                case (TUNE_ATTACK):
-                {
-                    for (uint8_t i = 0; i < tune_lengths[tune_index]; i++)
-                    {
-                        byte note = pgm_read_byte_near(tune_attack + i);
-                        buzzer.addNoteToNotesBuffer(note);
-                    }
-                }
-                break;
-                case (TUNE_RETREAT):
-                {
-                    for (uint8_t i = 0; i < tune_lengths[tune_index]; i++)
-                    {
-                        byte note = pgm_read_byte_near(tune_retreat + i);
-                        buzzer.addNoteToNotesBuffer(note);
-                    }
-                }
-                break;
-                case (TUNE_ALPHABET):
-                {
-                    for (uint8_t i = 0; i < tune_lengths[tune_index]; i++)
-                    {
-                        byte note = pgm_read_byte_near(tune_alphabet + i);
-                        buzzer.addNoteToNotesBuffer(note);
-                    }
-                }
-                break;
-                case (TUNE_DRYER_UNHAPPY):
-                {
-                    for (uint8_t i = 0; i < tune_lengths[tune_index]; i++)
-                    {
-                        byte note = pgm_read_byte_near(tune_dryer_unhappy + i);
-                        buzzer.addNoteToNotesBuffer(note);
-                    }
-                }
-                break;
-                default:
-                {
-                    buzzer.addNoteToNotesBuffer(C6_1);
-                    buzzer.addNoteToNotesBuffer(REST_2_8);
-                }
-                break;
-                };
+    {
+    case (TUNE_DRYER_HAPPY):
+    {
+        for (uint8_t i = 0; i < tune_lengths[tune_index]; i++)
+        {
+            byte note = pgm_read_byte_near(tune_dryer_happy + i);
+            buzzer.addNoteToNotesBuffer(note);
+        }
+    }
+    break;
+    case (TUNE_ATTACK):
+    {
+        for (uint8_t i = 0; i < tune_lengths[tune_index]; i++)
+        {
+            byte note = pgm_read_byte_near(tune_attack + i);
+            buzzer.addNoteToNotesBuffer(note);
+        }
+    }
+    break;
+    case (TUNE_RETREAT):
+    {
+        for (uint8_t i = 0; i < tune_lengths[tune_index]; i++)
+        {
+            byte note = pgm_read_byte_near(tune_retreat + i);
+            buzzer.addNoteToNotesBuffer(note);
+        }
+    }
+    break;
+    case (TUNE_ALPHABET):
+    {
+        for (uint8_t i = 0; i < tune_lengths[tune_index]; i++)
+        {
+            byte note = pgm_read_byte_near(tune_alphabet + i);
+            buzzer.addNoteToNotesBuffer(note);
+        }
+    }
+    break;
+    case (TUNE_DRYER_UNHAPPY):
+    {
+        for (uint8_t i = 0; i < tune_lengths[tune_index]; i++)
+        {
+            byte note = pgm_read_byte_near(tune_dryer_unhappy + i);
+            buzzer.addNoteToNotesBuffer(note);
+        }
+    }
+    break;
+    default:
+    {
+        buzzer.addNoteToNotesBuffer(C6_1);
+        buzzer.addNoteToNotesBuffer(REST_2_8);
+    }
+    break;
+    };
 }
 void kitchen_timer_state_refresh()
 {
