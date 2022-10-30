@@ -7,7 +7,7 @@
 #include <EEPROM.h>
 #include "SuperTimer.h"
 
-// #define ENABLE_SERIAL
+#define ENABLE_SERIAL
 
 #define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 1 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
 #define DISPLAY_IS_COMMON_ANODE true           // check led displays both displays should be of same type   //also set in SevSeg5Digits.h : MODEISCOMMONANODE
@@ -105,6 +105,8 @@ SuperTimer kitchenTimer;
 bool kitchenTimerCountingDownMemory;
 bool beep_memory;
 
+long alarm_started_millis;
+
 long nextTimeUpdateMillis;
 long nextBlinkUpdateMillis;
 long nextKitchenBlinkUpdateMillis;
@@ -164,27 +166,30 @@ const byte menu_item_titles[] PROGMEM = {
 #define MAIN_MENU_ITEM_ENABLE_HOURLY_BEEP 2
 #define MAIN_MENU_ITEM_ENABLE_SNOOZE_TIME_DECREASE 3
 #define MAIN_MENU_ITEM_TUNE 4
-#define TUNES_COUNT 5
+
+#define TUNES_COUNT 6
 
 #define LEN_TUNE_DRYER_HAPPY 12
 #define LEN_TUNE_ATTACK 13
 #define LEN_TUNE_DRYER_UNHAPPY 11
 #define LEN_TUNE_RETREAT 14
 #define LEN_TUNE_ALPHABET 77
-uint8_t tune_lengths[] = {LEN_TUNE_DRYER_HAPPY, LEN_TUNE_ATTACK, LEN_TUNE_DRYER_UNHAPPY, LEN_TUNE_RETREAT, LEN_TUNE_ALPHABET};
+// uint8_t tune_lengths[] = {LEN_TUNE_DRYER_HAPPY, LEN_TUNE_ATTACK, LEN_TUNE_DRYER_UNHAPPY, LEN_TUNE_RETREAT, LEN_TUNE_ALPHABET};
 
 const byte menu_item_tune_names[] PROGMEM = {
     'F', 'U', 'N', ' ',
     'A', 'T', 'A', 'C',
     'B', 'L', 'A', 'H',
     'R', 'E', 'T', 'R',
-    'A', 'L', 'F', 'A'};
+    'A', 'L', 'F', 'A',
+    'B', 'I', 'L', 'D'};
 
 #define TUNE_DRYER_HAPPY 0
 #define TUNE_ATTACK 1
 #define TUNE_DRYER_UNHAPPY 2
 #define TUNE_RETREAT 3
 #define TUNE_ALPHABET 4
+#define TUNE_BUILDUP 5
 
 // https://forum.arduino.cc/t/multi-dimensional-array-in-progmem-arduino-noob/45822/2
 // const uint8_t tunes[][100] PROGMEM = {
@@ -301,7 +306,8 @@ enum Alarm_status_state : uint8_t
     state_alarm_status_toggle,
     state_alarm_status_is_enabled,
     state_alarm_status_enable,
-    state_alarm_status_disable
+    state_alarm_status_disable,
+    state_alarm_status_buzzing
 };
 Alarm_status_state alarm_status_state;
 
@@ -528,18 +534,17 @@ void refresh_indicator_dot()
 {
 
     // alarm going off or snoozed has priority
-    if (alarm_status_state == state_alarm_status_snoozing || alarm_status_state == state_alarm_status_triggered)
+    if (alarm_status_state == state_alarm_status_snoozing )
     {
         set_display_indicator_dot((millis() % 250) > 125);
     }
+    else if ( alarm_status_state == state_alarm_status_buzzing){
+        set_display_indicator_dot(true);
+    }
+
     else if (main_state == state_display_time)
     {
-        // set_display_indicator_dot(kitchenTimer.getInFirstGivenHundredsPartOfSecond(500));
-        // if (alarm_status_state == state_alarm_status_snoozing)
-        // {
-        //     set_display_indicator_dot((millis() % 250) > 125);
-        // }
-        // else
+       
         if (kitchenTimer.getIsStarted())
         {
 
@@ -921,7 +926,7 @@ void main_menu_state_refresh()
         {
             if (button_up.isPressedEdge() || button_down.isPressedEdge() || button_enter.isPressedEdge())
             {
-                nextStepRotate(&alarm_tune_index, true, 0, TUNES_COUNT - 1);
+                nextStepRotate(&alarm_tune_index, button_up.isPressed() || button_enter.isPressed(), 0, TUNES_COUNT - 1);
 
                 for (uint8_t i = 0; i < 4; i++)
                 {
@@ -1330,6 +1335,13 @@ void alarm_status_refresh()
 
     case (state_alarm_status_triggered):
     {
+        alarm_started_millis = millis();
+        alarm_status_state = state_alarm_status_buzzing;
+    }
+    break;
+    case (state_alarm_status_buzzing):
+    {
+
         if (button_menu.getValueChanged() ||
             button_brightness.getValueChanged() ||
             button_alarm.getValueChanged() ||
@@ -1366,14 +1378,9 @@ void alarm_status_refresh()
 
             buzzer.clearBuzzerNotesBuffer();
         }
-        else // make sure to add else if here, otherwise buffer does not stay empty ast snooze press..
-
-            // add notes when buffer empty and alarm ringing
-            if (buzzer.getBuzzerNotesBufferEmpty())
-            {
-
-                play_tune(alarm_tune_index);
-            }
+        else{ // make sure to add else if here, otherwise buffer does not stay empty ast snooze press..
+            play_tune(alarm_tune_index);
+        }
     }
     break;
 
@@ -1402,60 +1409,89 @@ void alarm_status_refresh()
 
 void play_tune(uint8_t tune_index)
 {
-    switch (tune_index)
+    if (buzzer.getBuzzerNotesBufferEmpty())
+    // add notes when buffer empty and alarm ringing
     {
-    case (TUNE_DRYER_HAPPY):
-    {
-        for (uint8_t i = 0; i < tune_lengths[tune_index]; i++)
+        switch (tune_index)
         {
-            byte note = pgm_read_byte_near(tune_dryer_happy + i);
-            buzzer.addNoteToNotesBuffer(note);
-        }
-    }
-    break;
-    case (TUNE_ATTACK):
-    {
-        for (uint8_t i = 0; i < tune_lengths[tune_index]; i++)
+        case (TUNE_DRYER_HAPPY):
         {
-            byte note = pgm_read_byte_near(tune_attack + i);
-            buzzer.addNoteToNotesBuffer(note);
+            for (uint8_t i = 0; i < LEN_TUNE_DRYER_HAPPY; i++)
+            {
+                byte note = pgm_read_byte_near(tune_dryer_happy + i);
+                buzzer.addNoteToNotesBuffer(note);
+            }
         }
-    }
-    break;
-    case (TUNE_RETREAT):
-    {
-        for (uint8_t i = 0; i < tune_lengths[tune_index]; i++)
+        break;
+        case (TUNE_ATTACK):
         {
-            byte note = pgm_read_byte_near(tune_retreat + i);
-            buzzer.addNoteToNotesBuffer(note);
+            for (uint8_t i = 0; i < LEN_TUNE_ATTACK; i++)
+            {
+                byte note = pgm_read_byte_near(tune_attack + i);
+                buzzer.addNoteToNotesBuffer(note);
+            }
         }
-    }
-    break;
-    case (TUNE_ALPHABET):
-    {
-        for (uint8_t i = 0; i < tune_lengths[tune_index]; i++)
+        break;
+        case (TUNE_RETREAT):
         {
-            byte note = pgm_read_byte_near(tune_alphabet + i);
-            buzzer.addNoteToNotesBuffer(note);
+            for (uint8_t i = 0; i < LEN_TUNE_RETREAT; i++)
+            {
+                byte note = pgm_read_byte_near(tune_retreat + i);
+                buzzer.addNoteToNotesBuffer(note);
+            }
         }
-    }
-    break;
-    case (TUNE_DRYER_UNHAPPY):
-    {
-        for (uint8_t i = 0; i < tune_lengths[tune_index]; i++)
+        break;
+        case (TUNE_ALPHABET):
         {
-            byte note = pgm_read_byte_near(tune_dryer_unhappy + i);
-            buzzer.addNoteToNotesBuffer(note);
+            for (uint8_t i = 0; i < LEN_TUNE_ALPHABET; i++)
+            {
+                byte note = pgm_read_byte_near(tune_alphabet + i);
+                buzzer.addNoteToNotesBuffer(note);
+            }
         }
+        break;
+        case (TUNE_DRYER_UNHAPPY):
+        {
+            for (uint8_t i = 0; i < LEN_TUNE_DRYER_UNHAPPY; i++)
+            {
+                byte note = pgm_read_byte_near(tune_dryer_unhappy + i);
+                buzzer.addNoteToNotesBuffer(note);
+            }
+        }
+        break;
+        case (TUNE_BUILDUP):
+        {
+
+            long time_since_start_millis = millis() - alarm_started_millis;
+            uint16_t seconds_since_start = (uint16_t)(time_since_start_millis / 1000);
+            Serial.println(seconds_since_start);
+            uint16_t break_count;
+            buzzer.addNoteToNotesBuffer(D7_1);
+            if (seconds_since_start >= 20)
+            {
+                break_count = 1;
+            }
+            else
+            {
+                break_count = 1+ (400 - (uint16_t)((time_since_start_millis*time_since_start_millis)/1000000))/4;
+            }
+
+            // buzzer.addNoteToNotesBuffer(random(10, 58));
+            //for (uint8_t i = 0; i < 2; i++)
+            for (uint8_t i = 0; i < break_count; i++)
+            {
+                buzzer.addNoteToNotesBuffer(REST_1_8);
+            }
+        }
+        break;
+        default:
+        {
+            buzzer.addNoteToNotesBuffer(C6_1);
+            buzzer.addNoteToNotesBuffer(REST_2_8);
+        }
+        break;
+        };
     }
-    break;
-    default:
-    {
-        buzzer.addNoteToNotesBuffer(C6_1);
-        buzzer.addNoteToNotesBuffer(REST_2_8);
-    }
-    break;
-    };
 }
 void kitchen_timer_state_refresh()
 {
@@ -1745,7 +1781,7 @@ void loop()
     buzzer.checkAndPlayNotesBuffer();
     visualsManager.refresh();
     ledDisplay.refresh();
-    delay(DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS);
+    // delay(DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS);
 
     //  rtc.read();
     //  //*************************Time********************************
