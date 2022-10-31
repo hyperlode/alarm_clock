@@ -7,7 +7,7 @@
 #include <EEPROM.h>
 #include "SuperTimer.h"
 
-#define ENABLE_SERIAL
+// #define ENABLE_SERIAL
 
 #define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 1 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
 #define DISPLAY_IS_COMMON_ANODE true           // check led displays both displays should be of same type   //also set in SevSeg5Digits.h : MODEISCOMMONANODE
@@ -1464,7 +1464,7 @@ void play_tune(uint8_t tune_index)
 
             long time_since_start_millis = millis() - alarm_started_millis;
             uint16_t seconds_since_start = (uint16_t)(time_since_start_millis / 1000);
-            Serial.println(seconds_since_start);
+            // Serial.println(seconds_since_start);
             uint16_t break_count;
             buzzer.addNoteToNotesBuffer(D7_1);
             if (seconds_since_start >= 20)

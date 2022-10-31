@@ -264,7 +264,7 @@ void LedMultiplexer5x8::refresh()
         }
         
     }
-    delay(1);
+   // delay(1);
 }
 
 void LedMultiplexer5x8::setBrightness(byte value, bool exponential)
