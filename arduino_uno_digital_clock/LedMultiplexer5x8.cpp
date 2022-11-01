@@ -135,6 +135,68 @@ void LedMultiplexer5x8::Begin(boolean mode_isCommonAnode, byte D0, byte D1, byte
 
 
 
+void LedMultiplexer5x8::outputPinsToBuffer(){
+    ddr_bcd_buffer[0] = DDRB;
+    ddr_bcd_buffer[1] = DDRC;
+    ddr_bcd_buffer[2] = DDRD;
+}
+
+void LedMultiplexer5x8::bufferToOutputPins(){
+    DDRB = ddr_bcd_buffer[0];
+    DDRC = ddr_bcd_buffer[1];
+    DDRD = ddr_bcd_buffer[2];
+}
+
+void LedMultiplexer5x8::setPinToOutputBuffer(int pin, bool outputElseInput){
+
+  if (outputElseInput){
+    // set bit to one
+     if(pin<=7){
+      ddr_bcd_buffer[2] |= (1<<pin);
+    }else if (pin <=13){
+      ddr_bcd_buffer[0] |= (1<<pin-8);
+    }else if (pin == A0){
+      ddr_bcd_buffer[1] |= (0b00000001);
+    }else if (pin == A1){
+      ddr_bcd_buffer[1] |= (0b00000010);
+    }else if (pin == A2){
+      ddr_bcd_buffer[1] |= (0b00000100);
+    }else if (pin == A3){
+      ddr_bcd_buffer[1] |= (0b00001000);
+    }else if (pin == A4){
+      ddr_bcd_buffer[1] |= (0b00010000);
+    }else if (pin == A5){
+      ddr_bcd_buffer[1] |= (0b00100000);
+    }else{
+      //ASSERT ERROR
+      //#WARNING non resolved pin! 
+    }
+  }else{
+    // set bit to zero
+    if(pin<=7){
+      ddr_bcd_buffer[2] &= ~(1<<pin);
+    }else if (pin <=13){
+      ddr_bcd_buffer[0] &= ~(1<<pin-8);
+    }else if (pin == A0){
+      ddr_bcd_buffer[1] &= ~(0b00000001);
+    }else if (pin == A1){
+      ddr_bcd_buffer[1] &= ~(0b00000010);
+    }else if (pin == A2){
+      ddr_bcd_buffer[1] &= ~(0b00000100);
+    }else if (pin == A3){
+      ddr_bcd_buffer[1] &= ~(0b00001000);
+    }else if (pin == A4){
+      ddr_bcd_buffer[1] &= ~(0b00010000);
+    }else if (pin == A5){
+      ddr_bcd_buffer[1] &= ~(0b00100000);
+    }else{
+      //ASSERT ERROR
+      //#WARNING non resolved pin! 
+    }
+  }
+
+}
+
 void LedMultiplexer5x8::setPinFunction(int pin, bool outputElseInput){
   // pin numbers follow roughly the ports.
   // portD 0->7 (bit0=0,...)
@@ -142,6 +204,7 @@ void LedMultiplexer5x8::setPinFunction(int pin, bool outputElseInput){
   // portC A0->A5 (bit0=A0,...)
 
   if (outputElseInput){
+    // set bit to one
      if(pin<=7){
       DDRD |= (1<<pin);
     }else if (pin <=13){
@@ -160,9 +223,10 @@ void LedMultiplexer5x8::setPinFunction(int pin, bool outputElseInput){
       DDRC |= (0b00100000);
     }else{
       //ASSERT ERROR
-      //#WARNING non solved pin! 
+      //#WARNING non resolved pin! 
     }
   }else{
+    // set bit to zero
     if(pin<=7){
       DDRD &= ~(1<<pin);
     }else if (pin <=13){
@@ -181,7 +245,7 @@ void LedMultiplexer5x8::setPinFunction(int pin, bool outputElseInput){
       DDRC &= ~(0b00100000);
     }else{
       //ASSERT ERROR
-      //#WARNING non solved pin! 
+      //#WARNING non resolved pin! 
     }
   }
   
@@ -217,54 +281,81 @@ void LedMultiplexer5x8::refresh()
 
     
 //       turn everything off at the start to reduce flickering. 
+
+    outputPinsToBuffer();
+    // digitValues[0] = 0x00;
+    // digitValues[1] = 0x00;
+    // digitValues[2] = 0x00;
+    // digitValues[3] = 0x00;
+    // delay(1);
+    // digitValues[0] = 0x02;
+    // digitValues[1] = 0x00;
+    // digitValues[2] = 0x00;
+    // digitValues[3] = 0x00;
+    // delay(1);
     //turn digits off. 
     for (byte digit = 0; digit < DIGITS_COUNT; digit++)
     {
-        setPinFunction(DigitPins[digit], false);
+        //setPinToOutputBuffer(DigitPins[digit], false);
+        // pinMode(DigitPins[digit], OUTPUT);
+        digitalWrite(DigitPins[digit], DIGITOFF);
     }
+    // //turn segments on
+    // for (byte segment = 0; segment < 8; segment++)
+    // {
+    //     setPinToOutputBuffer(SegmentPins[segment], true);
+    // }
     //turn segments off
     for (byte segment = 0; segment < 8; segment++)
     {
-        setPinFunction(SegmentPins[segment], false);
+        //setPinToOutputBuffer(SegmentPins[segment], false);
+        digitalWrite(SegmentPins[segment], SEGMENTOFF);
     }
 
-      
+       delayMicroseconds( (uint16_t)(255 - this->brightness) * 10);
     segActive++;
  
     if (segActive > 7)
     {
-//        //this is the brightness control, going into virtual segments, and doing nothing...
-//        if (segActive > 7 + this->brightness)
-//        {
-//            segActive = 0;
-//        }
+       //this is the brightness control, going into virtual segments, and doing nothing...
+       if (segActive > 7 + 200)
+    //    if (segActive > 7 + this->brightness)
+       {
+           segActive = 0;
+       }
         segActive =0;
     }
 
     if (segActive <= 7)
     {
-        //Turn the relevant segment on
-        //pinMode(SegmentPins[segActive], OUTPUT);
-        setPinFunction(SegmentPins[segActive],true);
-        digitalWrite(SegmentPins[segActive], SEGMENTON);
+        // if (segActive == 7 || segActive == 6){
 
-        //For each segment, turn relevant digits on
-        for (byte digit = 0; digit < DIGITS_COUNT; digit++)
-        //for (byte digit = DIGITS_COUNT-1; digit >= 0; digit--)
-        {
-            if (getBit(&digitValues[digit], segActive))
+            
+            //Turn the relevant segment on
+            //pinMode(SegmentPins[segActive], OUTPUT);
+            setPinToOutputBuffer(SegmentPins[segActive],true);
+            digitalWrite(SegmentPins[segActive], SEGMENTON);
+
+            //For each segment, turn relevant digits on
+            for (byte digit = 0; digit < DIGITS_COUNT; digit++)
+            //for (byte digit = DIGITS_COUNT-1; digit >= 0; digit--)
             {
-//                pinMode(DigitPins[digit], OUTPUT);
-                setPinFunction(DigitPins[digit],true);
-                analogWrite(DigitPins[digit],  this->brightness);
-                //digitalWrite(DigitPins[digit], DIGITON);
-            }else{
-              //setPinFunction(DigitPins[digit],false); // doing things one by one causes flickering... (sometimes segment is one while it shouldn't...)
+                if (getBit(&digitValues[digit], segActive))
+                { 
+    //                pinMode(DigitPins[digit], OUTPUT);
+                    // setPinToOutputBuffer(DigitPins[digit],true);
+                //    analogWrite(DigitPins[digit],  this->brightness);
+                    digitalWrite(DigitPins[digit], DIGITON);
+                }else{
+                //setPinFunction(DigitPins[digit],false); // doing things one by one causes flickering... (sometimes segment is one while it shouldn't...)
+                    digitalWrite(DigitPins[digit], DIGITOFF);
+                }
             }
-        }
-        
+        // }
+         
     }
    // delay(1);
+   bufferToOutputPins();
 }
 
 void LedMultiplexer5x8::setBrightness(byte value, bool exponential)

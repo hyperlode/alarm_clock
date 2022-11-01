@@ -56,6 +56,8 @@ private:
     byte SegmentPins[8];
     byte digitValues[5];
 
+    uint8_t ddr_bcd_buffer[3];
+
     // boolean lights[5][8];
     //uint8_t lights[5];
 
@@ -66,14 +68,19 @@ private:
     //boolean decPoints[5];
     void setPinFunction(int pin, bool outputElseInput);
 
-    uint8_t boolContainer;
-// #define TEMPDECPOINTMEMORY 0
-#define MODEISCOMMONANODE 1 //should be defined in uservariables
+    void outputPinsToBuffer();
+    void bufferToOutputPins();
+    void setPinToOutputBuffer(int pin, bool outputElseInput);
 
-#define DIGITON getMode()
-#define DIGITOFF !getMode()
-#define SEGMENTON !getMode()
-#define SEGMENTOFF getMode()
+    uint8_t boolContainer;
+
+    // #define TEMPDECPOINTMEMORY 0
+    #define MODEISCOMMONANODE 1 //should be defined in uservariables
+
+    #define DIGITON getMode()
+    #define DIGITOFF !getMode()
+    #define SEGMENTON !getMode()
+    #define SEGMENTOFF getMode()
 
     //  byte digitActive;
 };

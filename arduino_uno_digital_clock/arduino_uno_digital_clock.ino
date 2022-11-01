@@ -8,6 +8,7 @@
 #include "SuperTimer.h"
 
 // #define ENABLE_SERIAL
+// #define ENABLE_MEASURE_CYCLE_TIME
 
 #define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 1 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
 #define DISPLAY_IS_COMMON_ANODE true           // check led displays both displays should be of same type   //also set in SevSeg5Digits.h : MODEISCOMMONANODE
@@ -64,9 +65,9 @@
 
 #define PIN_BUZZER A0
 
-#define PIN_BUTTON_2 2
-#define PIN_BUTTON_1 A2
 #define PIN_BUTTON_0 A1
+#define PIN_BUTTON_1 A2
+#define PIN_BUTTON_2 2
 #define PIN_BUTTON_3 A3
 
 #define button_down button_2
@@ -101,7 +102,6 @@ Button button_3;
 
 Buzzer buzzer;
 SuperTimer kitchenTimer;
-
 bool kitchenTimerCountingDownMemory;
 bool beep_memory;
 
@@ -114,6 +114,12 @@ long nextDisplayTimeUpdateMillis;
 long blink_offset;
 
 bool display_dot_status_memory;
+
+#define CYCLE_TIMES_WINDOW_SIZE 100
+uint8_t cycle_time_counter;
+long cycle_times_micros[CYCLE_TIMES_WINDOW_SIZE+1];
+long max_cycle;
+long min_cycle;
 
 long watchdog_last_button_press_millis;
 bool hourly_beep_done_memory;
@@ -1464,7 +1470,7 @@ void play_tune(uint8_t tune_index)
 
             long time_since_start_millis = millis() - alarm_started_millis;
             uint16_t seconds_since_start = (uint16_t)(time_since_start_millis / 1000);
-            // Serial.println(seconds_since_start);
+            
             uint16_t break_count;
             buzzer.addNoteToNotesBuffer(D7_1);
             if (seconds_since_start >= 20)
@@ -1759,6 +1765,28 @@ void updateTimeNow()
     }
 }
 
+void measure_cycle_time(){
+    
+    if (cycle_time_counter >= CYCLE_TIMES_WINDOW_SIZE+1 ){
+        cycle_time_counter = 0;
+        long sum = 0;
+        for (uint8_t i=0;i<CYCLE_TIMES_WINDOW_SIZE;i++){
+            long diff = (cycle_times_micros[i+1] - cycle_times_micros[i]);
+            sum += diff;
+            // Serial.println(diff);
+        }
+        float average;
+        average = 1.0 * (float)(sum)/CYCLE_TIMES_WINDOW_SIZE;
+        #ifdef ENABLE_SERIAL
+        Serial.println(average);
+        #endif
+        //Serial.println("********************");
+    }else{
+        // disregard processing cycle
+        cycle_times_micros[cycle_time_counter]= micros();
+        cycle_time_counter++;
+    }
+}
 void loop()
 {
 
@@ -1782,6 +1810,14 @@ void loop()
     visualsManager.refresh();
     ledDisplay.refresh();
     // delay(DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS);
+
+    #ifdef ENABLE_SERIAL
+        #ifdef ENABLE_MEASURE_CYCLE_TIME
+        measure_cycle_time();
+        #endif
+    #endif
+
+    
 
     //  rtc.read();
     //  //*************************Time********************************
