@@ -283,22 +283,25 @@ void LedMultiplexer5x8::refresh()
 //       turn everything off at the start to reduce flickering. 
 
     outputPinsToBuffer();
-    // digitValues[0] = 0x00;
-    // digitValues[1] = 0x00;
-    // digitValues[2] = 0x00;
-    // digitValues[3] = 0x00;
+    // digitValues[0] = 0x3f;
+    // digitValues[1] = 0x3f;
+    // digitValues[2] = 0x3f;
+    // digitValues[3] = 0x3f;
     // delay(1);
     // digitValues[0] = 0x02;
     // digitValues[1] = 0x00;
     // digitValues[2] = 0x00;
     // digitValues[3] = 0x00;
     // delay(1);
+
+     delayMicroseconds( 100);
     //turn digits off. 
     for (byte digit = 0; digit < DIGITS_COUNT; digit++)
     {
         //setPinToOutputBuffer(DigitPins[digit], false);
         // pinMode(DigitPins[digit], OUTPUT);
         digitalWrite(DigitPins[digit], DIGITOFF);
+        //analogWrite(DigitPins[digit],  0);
     }
     // //turn segments on
     // for (byte segment = 0; segment < 8; segment++)
@@ -312,17 +315,18 @@ void LedMultiplexer5x8::refresh()
         digitalWrite(SegmentPins[segment], SEGMENTOFF);
     }
 
-       delayMicroseconds( (uint16_t)(255 - this->brightness) * 10);
+   
+    // delayMicroseconds( (uint16_t)(255 - this->brightness) * 10);
     segActive++;
  
     if (segActive > 7)
     {
        //this is the brightness control, going into virtual segments, and doing nothing...
-       if (segActive > 7 + 200)
-    //    if (segActive > 7 + this->brightness)
-       {
-           segActive = 0;
-       }
+    //    if (segActive > 7 + 200)
+    // //    if (segActive > 7 + this->brightness)
+    //    {
+    //        segActive = 0;
+    //    }
         segActive =0;
     }
 
@@ -333,7 +337,7 @@ void LedMultiplexer5x8::refresh()
             
             //Turn the relevant segment on
             //pinMode(SegmentPins[segActive], OUTPUT);
-            setPinToOutputBuffer(SegmentPins[segActive],true);
+            // setPinToOutputBuffer(SegmentPins[segActive],true);
             digitalWrite(SegmentPins[segActive], SEGMENTON);
 
             //For each segment, turn relevant digits on
@@ -344,11 +348,14 @@ void LedMultiplexer5x8::refresh()
                 { 
     //                pinMode(DigitPins[digit], OUTPUT);
                     // setPinToOutputBuffer(DigitPins[digit],true);
-                //    analogWrite(DigitPins[digit],  this->brightness);
-                    digitalWrite(DigitPins[digit], DIGITON);
+                    // analogWrite(DigitPins[digit],  1);
+                    analogWrite(DigitPins[digit],  this->brightness);
+                //   analogWrite(DigitPins[digit],  100);
+                    // digitalWrite(DigitPins[digit], DIGITON);
                 }else{
                 //setPinFunction(DigitPins[digit],false); // doing things one by one causes flickering... (sometimes segment is one while it shouldn't...)
-                    digitalWrite(DigitPins[digit], DIGITOFF);
+                    // digitalWrite(DigitPins[digit], DIGITOFF);
+                    analogWrite(DigitPins[digit],  0);
                 }
             }
         // }

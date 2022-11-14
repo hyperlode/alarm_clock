@@ -1552,7 +1552,7 @@ void kitchen_timer_state_refresh()
     break;
     case (state_stopped):
     {
-        if (button_enter.isPressedEdge() || ((button_kitchen_timer.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_kitchen_timer.getLongPressPeriodicalEdge()))
+        if (button_kitchen_timer.isPressedEdge() || ((button_kitchen_timer.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_kitchen_timer.getLongPressPeriodicalEdge()))
         {
             kitchen_timer_state = state_running;
             kitchenTimer.start();
@@ -1569,7 +1569,7 @@ void kitchen_timer_state_refresh()
             kitchen_timer_state = state_running_refresh_display;
         }
 
-        if (button_kitchen_timer.isPressedEdge())
+        if (button_alarm.isPressedEdge())
         {
             kitchen_timer_state = state_exit;
         }
@@ -1589,11 +1589,11 @@ void kitchen_timer_state_refresh()
         {
             kitchen_timer_state = state_running_refresh_display;
         }
-        else if (button_kitchen_timer.isPressedEdge())
+        else if (button_alarm.isPressedEdge())
         {
             main_state = state_display_time;
         }
-        else if (button_enter.isPressedEdge() || ((button_kitchen_timer.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_kitchen_timer.getLongPressPeriodicalEdge()))
+        else if (button_kitchen_timer.isPressedEdge() || ((button_kitchen_timer.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_kitchen_timer.getLongPressPeriodicalEdge()))
         {
             kitchenTimer.reset();
             kitchen_timer_state = state_stopped_refresh_display;

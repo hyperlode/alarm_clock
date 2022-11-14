@@ -1,0 +1,22 @@
+### Module positions - created on Mon Nov 14 00:47:25 2022 ###
+### Printed by Pcbnew version (6.0.0)
+## Unit = mm, Angle = deg.
+## Side : top
+# Ref     Val                             Package                               PosX       PosY       Rot  Side
+C1        0603,100nF,50V,X7R_             C_0603_1608Metric                  68.9610   -50.3560   90.0000  top
+C5        0603,100nF,50V,X7R_             C_0603_1608Metric                  34.2900   -53.3270  -90.0000  top
+C6        0603,8.2pF,50V,C0G_             C_0603_1608Metric                  32.6390   -53.3270   90.0000  top
+C7        0603,8.2pF,50V,C0G_             C_0603_1608Metric                  32.6390   -56.6290   90.0000  top
+R1        high_current                    R_0603_1608Metric                   8.6374   -25.8948    0.0000  top
+R2        1M                              R_0603_1608Metric                  34.2900   -56.6290  -90.0000  top
+R3        4.7k                            R_0603_1608Metric                  65.6590   -50.3560  -90.0000  top
+R4        4.7k                            R_0603_1608Metric                  67.3100   -50.3560  -90.0000  top
+R5        10k                             R_0603_1608Metric                  35.9410   -53.3270  -90.0000  top
+R6        100                             R_0402_1005Metric                  28.9560   -50.6730  -90.0000  top
+R7        100                             R_0402_1005Metric                  32.3850   -50.6730  -90.0000  top
+R8        100                             R_0402_1005Metric                  31.2420   -50.6730  -90.0000  top
+R9        100                             R_0402_1005Metric                  30.0990   -50.6730  -90.0000  top
+U1        DS3231                          SOIC-16W_7.5x10.3mm_P1.27mm        57.7500   -56.0000    0.0000  top
+U4        ATmega328P-A                    TQFP-32_7x7mm_P0.8mm               43.2500   -55.2500    0.0000  top
+Y1        Crystal-Device_SMD_4pins_16MHz  Crystal_SMD_3225-4Pin_3.2x2.5mm    29.4072   -54.6960    0.0000  top
+## End

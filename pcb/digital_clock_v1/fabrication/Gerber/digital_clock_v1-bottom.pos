@@ -1,0 +1,7 @@
+### Module positions - created on Mon Nov 14 00:47:25 2022 ###
+### Printed by Pcbnew version (6.0.0)
+## Unit = mm, Angle = deg.
+## Side : bottom
+# Ref     Val         Package                         PosX       PosY       Rot  Side
+J1        USB_B_Mini  usb_mini_Molex-0548190519   -93.4000   -19.5000  180.0000  bottom
+## End
