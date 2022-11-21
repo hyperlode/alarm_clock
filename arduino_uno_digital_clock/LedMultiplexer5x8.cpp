@@ -55,7 +55,7 @@ Written by Dean Reading, 2012
 LedMultiplexer5x8::LedMultiplexer5x8()
 {
     //Initial values
-    // this->segActive = 0;
+    // this->digitActive = 0;
     // this->extraLedArray = false;
 }
 
@@ -119,7 +119,12 @@ void LedMultiplexer5x8::Begin(boolean mode_isCommonAnode, byte D0, byte D1, byte
     {
         pinMode(SegmentPins[seg], OUTPUT);
     }
-
+    // https://www.electronicwings.com/users/sanketmallawat91/projects/215/frequency-changing-of-pwm-pins-of-arduino-uno#:~:text=The%20Arduino%20IDE%20has%20a,signal%20of%200%25%20duty%20cycle.
+    // https://forum.arduino.cc/t/millis-and-timer-0/969036
+   // TCCR0B = TCCR0B & B11111000 | B00000001; // PWM 31372.55 Hz pins 5 and 6   // fucks up millis and buzzer. 
+    // TCCR1B = TCCR1B & B11111000 | B00000001; // PWM 62745.10 Hz pins 9 and 10  // no problem
+    // TCCR2B = TCCR2B & B11111000 | B00000001; // PWM 31372.55 Hz pins 3 and 11  // causes weird behaviour and problems "suddenly"
+    
     // no init needed, works with quick cycles anyways.
     // //Turn Everything Off
     // //Set all digit pins off.	Low for common anode, high for common cathode
@@ -294,7 +299,8 @@ void LedMultiplexer5x8::refresh()
     // digitValues[3] = 0x00;
     // delay(1);
 
-     delayMicroseconds( 100);
+     //delayMicroseconds( 10000);
+    // delayMicroseconds( 1000);
     //turn digits off. 
     for (byte digit = 0; digit < DIGITS_COUNT; digit++)
     {
@@ -317,46 +323,47 @@ void LedMultiplexer5x8::refresh()
 
    
     // delayMicroseconds( (uint16_t)(255 - this->brightness) * 10);
-    segActive++;
+    digitActive++;
  
-    if (segActive > 7)
+    // if (digitActive > (3 + 1))
+    if (digitActive > (3 + this->brightness))
     {
        //this is the brightness control, going into virtual segments, and doing nothing...
-    //    if (segActive > 7 + 200)
-    // //    if (segActive > 7 + this->brightness)
+    //    if (digitActive > 7 + 200)
+    // //    if (digitActive > 7 + this->brightness)
     //    {
-    //        segActive = 0;
+    //        digitActive = 0;
     //    }
-        segActive =0;
+        digitActive = 0;
     }
 
-    if (segActive <= 7)
+    if (digitActive <= 3)
     {
-        // if (segActive == 7 || segActive == 6){
 
             
             //Turn the relevant segment on
-            //pinMode(SegmentPins[segActive], OUTPUT);
-            // setPinToOutputBuffer(SegmentPins[segActive],true);
-            digitalWrite(SegmentPins[segActive], SEGMENTON);
+            //pinMode(SegmentPins[digitActive], OUTPUT);
+            // setPinToOutputBuffer(SegmentPins[digitActive],true);
+            digitalWrite(DigitPins[digitActive], DIGITON);
 
-            //For each segment, turn relevant digits on
-            for (byte digit = 0; digit < DIGITS_COUNT; digit++)
+            //For each digit, turn relevant segments on
+            for (byte segment = 0; segment < 8; segment++)
             //for (byte digit = DIGITS_COUNT-1; digit >= 0; digit--)
             {
-                if (getBit(&digitValues[digit], segActive))
+                if (getBit(&digitValues[digitActive], segment))
                 { 
     //                pinMode(DigitPins[digit], OUTPUT);
                     // setPinToOutputBuffer(DigitPins[digit],true);
                     // analogWrite(DigitPins[digit],  1);
-                    analogWrite(DigitPins[digit],  this->brightness);
-                //   analogWrite(DigitPins[digit],  100);
-                    // digitalWrite(DigitPins[digit], DIGITON);
-                }else{
-                //setPinFunction(DigitPins[digit],false); // doing things one by one causes flickering... (sometimes segment is one while it shouldn't...)
-                    // digitalWrite(DigitPins[digit], DIGITOFF);
-                    analogWrite(DigitPins[digit],  0);
+                    //analogWrite(DigitPins[digit],  this->brightness);
+                    // analogWrite(DigitPins[digit],  100);
+                      digitalWrite(SegmentPins[segment], SEGMENTON);
                 }
+                //else{
+                //setPinFunction(DigitPins[digit],false); // doing things one by one causes flickering... (sometimes segment is one while it shouldn't...)
+                //digitalWrite(SegmentPins[segment], SEGMENTOFF);
+                    //analogWrite(DigitPins[digit],  0);
+                //}
             }
         // }
          

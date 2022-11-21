@@ -41,7 +41,7 @@ public:
     bool getMode();
 
     //Public Variables
-    byte segActive;
+    byte digitActive;
 
 private:
     //Private Functions

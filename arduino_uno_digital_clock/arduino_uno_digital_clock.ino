@@ -458,7 +458,9 @@ void cycleBrightness(bool init)
 #if (BRIGHTNESS_LEVELS == 4)
     uint8_t brightness_settings[] = {0, 1, 10, 80, 254}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
 #elif (BRIGHTNESS_LEVELS == 3)
-    uint8_t brightness_settings[] = {0, 1, 10, 254}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
+    // uint8_t brightness_settings[] = {0, 1, 10, 254}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
+    // uint8_t brightness_settings[] = {0, 50, 80, 200}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
+    uint8_t brightness_settings[] = {200, 90, 10, 0}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
 #endif
 
 #ifdef CYCLING_GOES_BRIGHTER
@@ -494,6 +496,7 @@ void cycleBrightness(bool init)
         brightness_index = BRIGHTNESS_LEVELS;
     }
     ledDisplay.setBrightness(brightness_settings[brightness_index], false);
+    Serial.println(brightness_settings[brightness_index]);
 }
 
 void display_alarm()
@@ -1791,9 +1794,9 @@ void loop()
 {
 
     // input
-    button_2.refresh();
-    button_1.refresh();
     button_0.refresh();
+    button_1.refresh();
+    button_2.refresh();
     button_3.refresh();
 
     // process
