@@ -9,6 +9,7 @@
 
 // #define ENABLE_SERIAL
 // #define ENABLE_MEASURE_CYCLE_TIME
+// #define PROTOTYPE_BIG_BOX
 
 #define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 1 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
 #define DISPLAY_IS_COMMON_ANODE true           // check led displays both displays should be of same type   //also set in SevSeg5Digits.h : MODEISCOMMONANODE
@@ -42,10 +43,20 @@
 
 // DO NOT USE pin 3 and 11 for PWM if working with tone
 // the common anode pins work with pwm. pwm and tone libraries interfere.
+
+#ifdef PROTOTYPE_BIG_BOX
 #define PIN_DISPLAY_DIGIT_0 5 // swapped
 #define PIN_DISPLAY_DIGIT_1 10
 #define PIN_DISPLAY_DIGIT_2 9
 #define PIN_DISPLAY_DIGIT_3 6 // swapped!
+#else
+#define PIN_DISPLAY_DIGIT_0 6
+#define PIN_DISPLAY_DIGIT_1 9
+#define PIN_DISPLAY_DIGIT_2 10
+#define PIN_DISPLAY_DIGIT_3 5
+#endif
+
+
 #define PIN_DISPLAY_DIGIT_BUTTON_LIGHTS PIN_DUMMY
 
 #define PIN_DISPLAY_SEGMENT_A 12
@@ -67,8 +78,16 @@
 
 #define PIN_BUTTON_0 A1
 #define PIN_BUTTON_1 A2
+
+#ifdef PROTOTYPE_BIG_BOX
 #define PIN_BUTTON_2 2
 #define PIN_BUTTON_3 A3
+#else
+#define PIN_BUTTON_2 A3
+#define PIN_BUTTON_3 2
+
+
+#endif
 
 #define button_down button_2
 #define button_up button_3
