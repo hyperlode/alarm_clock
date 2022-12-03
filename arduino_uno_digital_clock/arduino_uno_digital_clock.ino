@@ -56,7 +56,6 @@
 #define PIN_DISPLAY_DIGIT_3 5
 #endif
 
-
 #define PIN_DISPLAY_DIGIT_BUTTON_LIGHTS PIN_DUMMY
 
 #define PIN_DISPLAY_SEGMENT_A 12
@@ -85,7 +84,6 @@
 #else
 #define PIN_BUTTON_2 A3
 #define PIN_BUTTON_3 2
-
 
 #endif
 
@@ -136,7 +134,7 @@ bool display_dot_status_memory;
 
 #define CYCLE_TIMES_WINDOW_SIZE 100
 uint8_t cycle_time_counter;
-long cycle_times_micros[CYCLE_TIMES_WINDOW_SIZE+1];
+long cycle_times_micros[CYCLE_TIMES_WINDOW_SIZE + 1];
 long max_cycle;
 long min_cycle;
 
@@ -562,17 +560,18 @@ void refresh_indicator_dot()
 {
 
     // alarm going off or snoozed has priority
-    if (alarm_status_state == state_alarm_status_snoozing )
+    if (alarm_status_state == state_alarm_status_snoozing)
     {
         set_display_indicator_dot((millis() % 250) > 125);
     }
-    else if ( alarm_status_state == state_alarm_status_buzzing){
+    else if (alarm_status_state == state_alarm_status_buzzing)
+    {
         set_display_indicator_dot(true);
     }
 
     else if (main_state == state_display_time)
     {
-       
+
         if (kitchenTimer.getIsStarted())
         {
 
@@ -1406,7 +1405,8 @@ void alarm_status_refresh()
 
             buzzer.clearBuzzerNotesBuffer();
         }
-        else{ // make sure to add else if here, otherwise buffer does not stay empty ast snooze press..
+        else
+        { // make sure to add else if here, otherwise buffer does not stay empty ast snooze press..
             play_tune(alarm_tune_index);
         }
     }
@@ -1492,7 +1492,7 @@ void play_tune(uint8_t tune_index)
 
             long time_since_start_millis = millis() - alarm_started_millis;
             uint16_t seconds_since_start = (uint16_t)(time_since_start_millis / 1000);
-            
+
             uint16_t break_count;
             buzzer.addNoteToNotesBuffer(D7_1);
             if (seconds_since_start >= 20)
@@ -1501,11 +1501,11 @@ void play_tune(uint8_t tune_index)
             }
             else
             {
-                break_count = 1+ (400 - (uint16_t)((time_since_start_millis*time_since_start_millis)/1000000))/4;
+                break_count = 1 + (400 - (uint16_t)((time_since_start_millis * time_since_start_millis) / 1000000)) / 4;
             }
 
             // buzzer.addNoteToNotesBuffer(random(10, 58));
-            //for (uint8_t i = 0; i < 2; i++)
+            // for (uint8_t i = 0; i < 2; i++)
             for (uint8_t i = 0; i < break_count; i++)
             {
                 buzzer.addNoteToNotesBuffer(REST_1_8);
@@ -1579,6 +1579,10 @@ void kitchen_timer_state_refresh()
             kitchen_timer_state = state_running;
             kitchenTimer.start();
             buzzer.addNoteToNotesBuffer(G6_4);
+            if (kitchen_timer_set_time_index != EEPROM.read(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX))
+            {
+                EEPROM.write(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX, kitchen_timer_set_time_index);
+            }
         }
         if (millis() > nextKitchenBlinkUpdateMillis)
         {
@@ -1640,10 +1644,7 @@ void kitchen_timer_state_refresh()
     break;
     case (state_exit):
     {
-        if (kitchen_timer_set_time_index != EEPROM.read(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX))
-        {
-            EEPROM.write(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX, kitchen_timer_set_time_index);
-        }
+
         main_state = state_display_time;
     }
     break;
@@ -1787,25 +1788,30 @@ void updateTimeNow()
     }
 }
 
-void measure_cycle_time(){
-    
-    if (cycle_time_counter >= CYCLE_TIMES_WINDOW_SIZE+1 ){
+void measure_cycle_time()
+{
+
+    if (cycle_time_counter >= CYCLE_TIMES_WINDOW_SIZE + 1)
+    {
         cycle_time_counter = 0;
         long sum = 0;
-        for (uint8_t i=0;i<CYCLE_TIMES_WINDOW_SIZE;i++){
-            long diff = (cycle_times_micros[i+1] - cycle_times_micros[i]);
+        for (uint8_t i = 0; i < CYCLE_TIMES_WINDOW_SIZE; i++)
+        {
+            long diff = (cycle_times_micros[i + 1] - cycle_times_micros[i]);
             sum += diff;
             // Serial.println(diff);
         }
         float average;
-        average = 1.0 * (float)(sum)/CYCLE_TIMES_WINDOW_SIZE;
-        #ifdef ENABLE_SERIAL
+        average = 1.0 * (float)(sum) / CYCLE_TIMES_WINDOW_SIZE;
+#ifdef ENABLE_SERIAL
         Serial.println(average);
-        #endif
-        //Serial.println("********************");
-    }else{
+#endif
+        // Serial.println("********************");
+    }
+    else
+    {
         // disregard processing cycle
-        cycle_times_micros[cycle_time_counter]= micros();
+        cycle_times_micros[cycle_time_counter] = micros();
         cycle_time_counter++;
     }
 }
@@ -1833,13 +1839,11 @@ void loop()
     ledDisplay.refresh();
     // delay(DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS);
 
-    #ifdef ENABLE_SERIAL
-        #ifdef ENABLE_MEASURE_CYCLE_TIME
-        measure_cycle_time();
-        #endif
-    #endif
-
-    
+#ifdef ENABLE_SERIAL
+#ifdef ENABLE_MEASURE_CYCLE_TIME
+    measure_cycle_time();
+#endif
+#endif
 
     //  rtc.read();
     //  //*************************Time********************************
