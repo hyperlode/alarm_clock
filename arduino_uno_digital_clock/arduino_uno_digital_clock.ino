@@ -1,5 +1,5 @@
 
-//#define ENABLE_SERIAL
+#define ENABLE_SERIAL
 // #define ENABLE_MEASURE_CYCLE_TIME
 // #define PROTOTYPE_BIG_BOX
 // #define PROTOTYPE_GRAVITY_RTC
@@ -306,7 +306,8 @@ enum Main_menu_state : uint8_t
     state_main_menu_init = 0,
     state_main_menu_exit = 1,
     state_main_menu_display_item = 2,
-    state_main_menu_modify_item = 3
+    state_main_menu_modify_item = 3,
+    state_main_menu_save_and_back_to_menu = 4
 
 };
 Main_menu_state main_menu_state;
@@ -729,7 +730,7 @@ void main_menu_state_refresh()
     case (state_main_menu_init):
     {
         main_menu_state = state_main_menu_display_item;
-        // main_menu_item_index = 0;
+        main_menu_item_index = 0; // by commenting this, preserve menu position. But, in reality, there was no need for this
         main_menu_display_update = true;
         divider_colon_to_display(false);
     }
@@ -755,11 +756,14 @@ void main_menu_state_refresh()
         }
         if (button_up.isPressedEdge() || button_down.isPressedEdge())
         {
-            // // one cycle through menu and back to main menu.
-            // if (main_menu_item_index == MENU_MENU_ITEMS_COUNT - 1){
-            //     main_menu_state = state_main_menu_exit;
-            // }
-            nextStepRotate(&main_menu_item_index, button_down.isPressed(), 0, MENU_MENU_ITEMS_COUNT - 1);
+            //Serial.println(main_menu_item_index);
+            // one cycle through menu and back to main menu.
+            if (main_menu_item_index == MENU_MENU_ITEMS_COUNT - 1 && button_up.isPressed()){
+                main_menu_state = state_main_menu_exit;
+            }
+            
+            nextStepRotate(&main_menu_item_index, button_up.isPressed(), 0, MENU_MENU_ITEMS_COUNT - 1);
+           
             main_menu_display_update = true;
             set_blink_offset();
         }
@@ -819,16 +823,21 @@ void main_menu_state_refresh()
     }
     break;
 
+    case (state_main_menu_save_and_back_to_menu):
+    {
+        main_menu_state = state_main_menu_display_item;
+
+        eeprom_write_byte_if_changed(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES, alarm_snooze_duration_minutes);
+        eeprom_write_byte_if_changed(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED, hourly_beep_enabled);
+        eeprom_write_byte_if_changed(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE, enable_snooze_time_decrease);
+        eeprom_write_byte_if_changed(EEPROM_ADDRESS_ALARM_TUNE, alarm_tune_index);
+    }
+    break;
     case (state_main_menu_modify_item):
     {
         if (button_exit.isPressedEdge() || (millis() > watchdog_last_button_press_millis + MAIN_MENU_MODIFY_ITEMS_AUTO_ESCAPE_MILLIS))
         {
-            main_menu_state = state_main_menu_display_item;
-
-            eeprom_write_byte_if_changed(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES, alarm_snooze_duration_minutes);
-            eeprom_write_byte_if_changed(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED, hourly_beep_enabled);
-            eeprom_write_byte_if_changed(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE, enable_snooze_time_decrease);
-            eeprom_write_byte_if_changed(EEPROM_ADDRESS_ALARM_TUNE, alarm_tune_index);
+            main_menu_state = state_main_menu_save_and_back_to_menu;
         }
 
         switch (main_menu_item_index)
@@ -856,13 +865,20 @@ void main_menu_state_refresh()
             }
             if (button_enter.isPressedEdge())
             {
-                nextStepRotate(&time_set_index_helper, true, 0, 2);
+                time_set_index_helper++;
+                if (time_set_index_helper == 3){
+                    main_menu_state = state_main_menu_save_and_back_to_menu;
+                }
+                //nextStepRotate(&time_set_index_helper, true, 0, 2);
             };
         }
         break;
         case (MAIN_MENU_ITEM_TUNE):
         {
-            if (button_up.isPressedEdge() || button_down.isPressedEdge() || button_enter.isPressedEdge())
+            if (button_enter.isPressedEdge()){
+                main_menu_state = state_main_menu_save_and_back_to_menu ;
+            }
+            if (button_up.isPressedEdge() || button_down.isPressedEdge() )
             {
                 nextStepRotate(&alarm_tune_index, button_up.isPressed() || button_enter.isPressed(), 0, TUNES_COUNT - 1);
 
@@ -878,10 +894,9 @@ void main_menu_state_refresh()
         break;
         case (MAIN_MENU_ITEM_SNOOZE_TIME):
         {
-            // if (button_enter.isPressedEdge())
-            // {
-            //     main_menu_state = state_main_menu_exit;
-            // }
+            if (button_enter.isPressedEdge()){
+                main_menu_state = state_main_menu_save_and_back_to_menu;
+            }
             visualsManager.setNumberToDisplay(alarm_snooze_duration_minutes, false);
             if (button_up.isPressedEdge() || button_down.isPressedEdge())
             {
@@ -892,7 +907,11 @@ void main_menu_state_refresh()
         case (MAIN_MENU_ITEM_ENABLE_HOURLY_BEEP):
         {
             visualsManager.setBoolToDisplay(hourly_beep_enabled);
-            if (button_up.isPressedEdge() || button_down.isPressedEdge() || button_enter.isPressedEdge())
+            if (button_enter.isPressedEdge()){
+                main_menu_state = state_main_menu_save_and_back_to_menu;
+            }
+            if (button_up.isPressedEdge() || button_down.isPressedEdge())
+            // if (button_up.isPressedEdge() || button_down.isPressedEdge() || button_enter.isPressedEdge())
             {
                 hourly_beep_enabled = !hourly_beep_enabled;
             }
@@ -900,8 +919,11 @@ void main_menu_state_refresh()
         break;
         case (MAIN_MENU_ITEM_ENABLE_SNOOZE_TIME_DECREASE):
         {
+            if (button_enter.isPressedEdge()){
+                main_menu_state = state_main_menu_save_and_back_to_menu;
+            }
             visualsManager.setBoolToDisplay(enable_snooze_time_decrease);
-            if (button_up.isPressedEdge() || button_down.isPressedEdge() || button_enter.isPressedEdge())
+            if (button_up.isPressedEdge() || button_down.isPressedEdge() )
             {
                 enable_snooze_time_decrease = !enable_snooze_time_decrease;
             }
