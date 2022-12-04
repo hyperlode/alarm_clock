@@ -1,4 +1,15 @@
+
+//#define ENABLE_SERIAL
+// #define ENABLE_MEASURE_CYCLE_TIME
+// #define PROTOTYPE_BIG_BOX
+// #define PROTOTYPE_GRAVITY_RTC
+
+#ifdef PROTOTYPE_GRAVITY_RTC
 #include "GravityRtc.h"
+#else
+#include "DS3231.h"
+#endif
+
 #include "Wire.h"
 #include "Button.h"
 #include "DisplayDigitsHandler5Digits.h"
@@ -6,10 +17,6 @@
 #include "Buzzer.h"
 #include <EEPROM.h>
 #include "SuperTimer.h"
-
-// #define ENABLE_SERIAL
-// #define ENABLE_MEASURE_CYCLE_TIME
-// #define PROTOTYPE_BIG_BOX
 
 #define DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS 1 // if we iterate too fast through the loop, the display gets refreshed so quickly that it never really settles down. Off time at transistions beats ON time. So, with a dealy, we increase the ON time a tad.
 #define DISPLAY_IS_COMMON_ANODE true           // check led displays both displays should be of same type   //also set in SevSeg5Digits.h : MODEISCOMMONANODE
@@ -110,7 +117,12 @@
 
 DisplayManagement visualsManager;
 LedMultiplexer5x8 ledDisplay;
+
+#ifdef PROTOTYPE_GRAVITY_RTC
 GravityRtc rtc; // RTC Initialization
+#else
+DS3231 rtcDS3231;
+#endif
 
 Button button_2;
 Button button_1;
@@ -361,112 +373,6 @@ void set_blink_offset()
     blink_offset = millis() % 1000;
 }
 
-void setup()
-{
-
-#ifdef ENABLE_SERIAL
-    Serial.begin(9600);
-#endif
-    blinker = false;
-
-    rtc.setup();
-
-    // Set the RTC time automatically: Calibrate RTC time by your computer time
-    // rtc.adjustRtc(F(__DATE__), F(__TIME__));
-
-    // Set the RTC time manually
-    // rtc.adjustRtc(2017,6,19,1,12,7,0);  //Set time: 2017/6/19, Monday, 12:07:00
-    // #define button_1 button_0
-
-    button_0.init(PIN_BUTTON_0);
-    button_1.init(PIN_BUTTON_1);
-    button_2.init(PIN_BUTTON_2);
-    button_3.init(PIN_BUTTON_3);
-
-    ledDisplay.Begin(DISPLAY_IS_COMMON_ANODE, PIN_DISPLAY_DIGIT_0, PIN_DISPLAY_DIGIT_1, PIN_DISPLAY_DIGIT_2, PIN_DISPLAY_DIGIT_3, PIN_DISPLAY_DIGIT_BUTTON_LIGHTS, PIN_DISPLAY_SEGMENT_A, PIN_DISPLAY_SEGMENT_B, PIN_DISPLAY_SEGMENT_C, PIN_DISPLAY_SEGMENT_D, PIN_DISPLAY_SEGMENT_E, PIN_DISPLAY_SEGMENT_F, PIN_DISPLAY_SEGMENT_G, PIN_DISPLAY_SEGMENT_DP);
-    visualsManager.setMultiplexerBuffer(ledDisplay.getDigits());
-
-    buzzer.setPin(PIN_BUZZER);
-    buzzer.setSpeedRatio(2);
-
-    // check eeprom sanity. If new device, set values in eeprom
-    if (EEPROM.read(EEPROM_ADDRESS_EEPROM_VALID) != EEPROM_VALID_VALUE)
-    {
-        EEPROM.write(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES, FACTORY_DEFAULT_SNOOZE_TIME_MINUTES);
-        EEPROM.write(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED, FACTORY_DEFAULT_HOURLY_BEEP_ENABLED);
-        EEPROM.write(EEPROM_ADDRESS_ALARM_SET_MEMORY, FACTORY_DEFAULT_ALARM_SET_MEMORY);
-        EEPROM.write(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX, FACTORY_DEFAULT_KITCHEN_TIMER);
-        EEPROM.write(EEPROM_ADDRESS_ALARM_HOUR, FACTORY_DEFAULT_ALARM_HOUR);
-        EEPROM.write(EEPROM_ADDRESS_ALARM_MINUTE, FACTORY_DEFAULT_ALARM_MINUTE);
-        EEPROM.write(EEPROM_ADDRESS_EEPROM_VALID, EEPROM_VALID_VALUE);
-        EEPROM.write(EEPROM_ADDRESS_ALARM_IS_SNOOZING, FACTORY_DEFAULT_ALARM_IS_SNOOZING);
-        EEPROM.write(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE, FACTORY_DEFAULT_ALARM_ENABLE_SNOOZE_TIME_DECREASE);
-        EEPROM.write(EEPROM_ADDRESS_ALARM_TUNE, FACTORY_DEFAULT_ALARM_TUNE);
-        buzzer.addNoteToNotesBuffer(C5_1);
-        buzzer.addNoteToNotesBuffer(D5_2);
-        buzzer.addNoteToNotesBuffer(E5_4);
-        buzzer.addNoteToNotesBuffer(F5_8);
-    }
-
-    // get eeprom values
-    alarm_hour = EEPROM.read(EEPROM_ADDRESS_ALARM_HOUR);
-    alarm_minute = EEPROM.read(EEPROM_ADDRESS_ALARM_MINUTE);
-    alarm_snooze_duration_minutes = EEPROM.read(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES);
-    kitchen_timer_set_time_index = EEPROM.read(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX);
-    hourly_beep_enabled = EEPROM.read(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED);
-    enable_snooze_time_decrease = EEPROM.read(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE);
-    uint8_t is_snoozing = EEPROM.read(EEPROM_ADDRESS_ALARM_IS_SNOOZING);
-    uint8_t alarm_enabled = EEPROM.read(EEPROM_ADDRESS_ALARM_SET_MEMORY);
-    alarm_tune_index = EEPROM.read(EEPROM_ADDRESS_ALARM_TUNE);
-    for (uint8_t i = 0; i < 4; i++)
-    {
-        tune_name_buf[i] = pgm_read_byte_near(menu_item_tune_names + 4 * alarm_tune_index + i);
-    }
-    if (alarm_enabled > 64)
-    {
-        alarm_status_state = state_alarm_status_is_enabled;
-    }
-    else
-    {
-        alarm_status_state = state_alarm_status_is_not_enabled;
-    }
-
-    if (is_snoozing > 64)
-    {
-        // if power cut during snoozing, trigger alarm right away at power on.
-        alarm_status_state = state_alarm_status_triggered;
-    }
-
-    nextTimeUpdateMillis = millis();
-    nextBlinkUpdateMillis = millis();
-    nextKitchenBlinkUpdateMillis = millis();
-    nextDisplayTimeUpdateMillis = millis();
-    cycleBrightness(true);
-    main_state = state_display_time;
-    alarm_set_state = state_alarm_init;
-
-    kitchenTimer.setInitCountDownTimeSecs(timeDialDiscreteSeconds[kitchen_timer_set_time_index]);
-    // kitchen_timer_state = state_stopped_refresh_display;
-    blink_offset = 0;
-
-// #define ALARM_DEBUG
-#ifdef ALARM_DEBUG
-
-//   rtc.read();
-//   alarm_hour = rtc.hour;
-//   alarm_minute = rtc.minute + 1;
-#endif
-
-    snooze_count = 0;
-    total_snooze_time_minutes = 0;
-
-    uint8_t test[32];
-    rtc.readMemory(test);
-    //   for (uint8_t i=0;i<32;i++){
-    //     Serial.println(test[i]);
-    //   }
-}
-
 void cycleBrightness(bool init)
 {
 
@@ -543,13 +449,6 @@ void add_leading_zeros(int16_t number, bool leading_zeros_for_most_left_digit)
         }
     }
 }
-
-// void divider_colon_to_display()
-// {
-//     // will blink with a two second period
-//     rtc.read();
-//     visualsManager.setDecimalPointToDisplay(rtc.second % 2, 1);
-// }
 
 void divider_colon_to_display(bool active)
 {
@@ -637,8 +536,6 @@ void set_display_indicator_dot(bool active)
 void seconds_to_display()
 {
     int16_t timeAsNumber;
-    // rtc.read();
-    // timeAsNumber = (int16_t)rtc.second;
     timeAsNumber = (int16_t)second_now;
     visualsManager.setNumberToDisplay(timeAsNumber, false);
     if (timeAsNumber < 10)
@@ -651,8 +548,6 @@ void seconds_to_display()
 void minutes_seconds_to_display()
 {
     int16_t timeAsNumber;
-    // rtc.read();
-    // timeAsNumber = 100 * ((int16_t)rtc.minute) + (int16_t)rtc.second;
     timeAsNumber = 100 * (int16_t)minute_now + (int16_t)second_now;
     visualsManager.setNumberToDisplay(timeAsNumber, false);
     add_leading_zeros(timeAsNumber, true);
@@ -662,16 +557,8 @@ void minutes_seconds_to_display()
 void hour_minutes_to_display()
 {
     int16_t timeAsNumber;
-    // rtc.read();
-    // timeAsNumber = 100 * ((int16_t)rtc.hour) + (int16_t)rtc.minute;
     timeAsNumber = 100 * ((int16_t)hour_now) + (int16_t)minute_now;
     visualsManager.setNumberToDisplay(timeAsNumber, false);
-    //   if (timeAsNumber < 100) {
-    //     visualsManager.setCharToDisplay('0', 1); // leading zero at midnight ("0" hour)
-    //     if(rtc.minute<10){
-    //         visualsManager.setCharToDisplay('0', 2); // leading zero at midnight for the first nine minutes("0" hour)
-    //     }
-    //   }
     add_leading_zeros(timeAsNumber, false);
     divider_colon_to_display(second_now % 2);
 }
@@ -680,6 +567,8 @@ void set_time(Time_type t)
 {
     if (button_down.isPressedEdge() || button_up.isPressedEdge() || button_down.getLongPressPeriodicalEdge() || button_up.getLongPressPeriodicalEdge())
     {
+#ifdef PROTOTYPE_GRAVITY_RTC
+
         rtc.read();
 
         if (t == hours)
@@ -707,7 +596,35 @@ void set_time(Time_type t)
             second_now = rtc.second;
         }
         rtc.adjustRtc(rtc.year, rtc.month, rtc.day, rtc.week, rtc.hour, rtc.minute, rtc.second);
+#else
 
+        if (t == hours)
+        {
+            nextStepRotate(&hour_now, button_up.isPressed(), 0, 23);
+            rtcDS3231.setHour(hour_now);
+            
+            nextBlinkUpdateMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinker = true;
+            hour_minutes_to_display();
+        }
+        else if (t == minutes)
+        {
+            nextStepRotate(&minute_now, button_up.isPressed(), 0, 59);
+            rtcDS3231.setMinute(minute_now);
+            nextBlinkUpdateMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinker = true;
+            hour_minutes_to_display();
+        }
+        else if (t == seconds)
+        {
+            rtcDS3231.setSecond(0);
+            second_now = rtcDS3231.getSecond();
+
+            nextBlinkUpdateMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinker = true;
+            seconds_to_display();
+        }
+#endif
         // display updated time here. Even in the "off time" of the blinking process, it will still display the change for the remainder of the off-time. This is good.
     }
 
@@ -715,9 +632,6 @@ void set_time(Time_type t)
     {
 
         nextBlinkUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
-
-        // rtc.read();
-        // divider_colon_to_display(now_second % 2);
 
         if (t == hours)
         {
@@ -756,15 +670,6 @@ void set_time(Time_type t)
 
 void display_time_state_refresh()
 {
-
-    //   if (millis() > nextTimeUpdateMillis ) {
-    //     nextTimeUpdateMillis = millis() + TIME_UPDATE_DELAY;
-    //     rtc.read();
-    //     hour_now = rtc.hour;
-    //     minute_now = rtc.minute;
-    //     second_now = rtc.second;
-    //
-    //   }
 
     if (millis() > nextDisplayTimeUpdateMillis)
     {
@@ -1191,7 +1096,12 @@ void alarm_set_state_refresh()
             display_alarm();
             nextBlinkUpdateMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
             blinker = true;
+#ifdef PROTOTYPE_GRAVITY_RTC
+
             rtc.setAlarm(alarm_hour, alarm_minute);
+#else
+
+#endif
         }
 
         if (button_alarm.isPressedEdge())
@@ -1779,11 +1689,21 @@ void updateTimeNow()
     {
         nextTimeUpdateMillis = millis() + TIME_UPDATE_DELAY;
 
-        // limit calls to peripheral by only loading time periodically
+// limit calls to peripheral by only loading time periodically
+#ifdef PROTOTYPE_GRAVITY_RTC
+
         rtc.read();
         hour_now = rtc.hour;
         minute_now = rtc.minute;
         second_now = rtc.second;
+#else
+        bool is_h12;
+        bool is_PM_time;
+        hour_now = rtcDS3231.getHour(is_h12, is_PM_time);
+        minute_now = rtcDS3231.getMinute();
+        second_now = rtcDS3231.getSecond();
+
+#endif
         // Serial.println(second_now);
     }
 }
@@ -1815,7 +1735,8 @@ void measure_cycle_time()
         cycle_time_counter++;
     }
 }
-void loop()
+
+void main_application_loop()
 {
 
     // input
@@ -1838,28 +1759,182 @@ void loop()
     visualsManager.refresh();
     ledDisplay.refresh();
     // delay(DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS);
+}
+
+// ****DS3231 test****
+// DS3231 rtcDS3231;
+
+// bool century = false;
+// bool h12Flag;
+// bool pmFlag;
+
+void setup()
+{
+
+#ifdef ENABLE_SERIAL
+    Serial.begin(9600);
+#endif
+
+#ifdef PROTOTYPE_GRAVITY_RTC
+    //  for (int i=0; i<5; i++){
+        //  rtc.read();
+        //  //*************************Time********************************
+        //  Serial.print("   Year = ");//year
+        //  Serial.print(rtc.year);
+        //  Serial.print("   Month = ");//month
+        //  Serial.print(rtc.month);
+        //  Serial.print("   Day = ");//day
+        //  Serial.print(rtc.day);
+        //  Serial.print("   Week = ");//week
+        //  Serial.print(rtc.week);
+        //  Serial.print("   Hour = ");//hour
+        //  Serial.print(rtc.hour);
+        //  Serial.print("   Minute = ");//minute
+        //  Serial.print(rtc.minute);
+        //  Serial.print("   Second = ");//second
+        //  Serial.println(rtc.second);
+        //  delay(1000);
+    //}
+#else
+
+    // **** TEST DS3231 test
+    // // Start the I2C interface
+    // 	Wire.begin();
+    //   for (int i=0; i<5; i++){
+    //       delay(1000);
+    //       Serial.print(rtcDS3231.getYear(), DEC);
+    //       Serial.print("-");
+    //       Serial.print(rtcDS3231.getMonth(century), DEC);
+    //       Serial.print("-");
+    //       Serial.print(rtcDS3231.getDate(), DEC);
+    //       Serial.print(" ");
+    //       Serial.print(rtcDS3231.getHour(h12Flag, pmFlag), DEC); //24-hr
+    //       Serial.print(":");
+    //       Serial.print(rtcDS3231.getMinute(), DEC);
+    //       Serial.print(":");
+    //       Serial.println(rtcDS3231.getSecond(), DEC);
+    //   }
+#endif
+
+    blinker = false;
+#ifdef PROTOTYPE_GRAVITY_RTC
+
+    rtc.setup();
+
+// Set the RTC time automatically: Calibrate RTC time by your computer time
+// rtc.adjustRtc(F(__DATE__), F(__TIME__));
+
+// Set the RTC time manually
+// rtc.adjustRtc(2017,6,19,1,12,7,0);  //Set time: 2017/6/19, Monday, 12:07:00
+// #define button_1 button_0
+#else
+    Wire.begin();
+#endif
+
+    button_0.init(PIN_BUTTON_0);
+    button_1.init(PIN_BUTTON_1);
+    button_2.init(PIN_BUTTON_2);
+    button_3.init(PIN_BUTTON_3);
+
+    ledDisplay.Begin(DISPLAY_IS_COMMON_ANODE, PIN_DISPLAY_DIGIT_0, PIN_DISPLAY_DIGIT_1, PIN_DISPLAY_DIGIT_2, PIN_DISPLAY_DIGIT_3, PIN_DISPLAY_DIGIT_BUTTON_LIGHTS, PIN_DISPLAY_SEGMENT_A, PIN_DISPLAY_SEGMENT_B, PIN_DISPLAY_SEGMENT_C, PIN_DISPLAY_SEGMENT_D, PIN_DISPLAY_SEGMENT_E, PIN_DISPLAY_SEGMENT_F, PIN_DISPLAY_SEGMENT_G, PIN_DISPLAY_SEGMENT_DP);
+    visualsManager.setMultiplexerBuffer(ledDisplay.getDigits());
+
+    buzzer.setPin(PIN_BUZZER);
+    buzzer.setSpeedRatio(2);
+
+    // check eeprom sanity. If new device, set values in eeprom
+    if (EEPROM.read(EEPROM_ADDRESS_EEPROM_VALID) != EEPROM_VALID_VALUE)
+    {
+        EEPROM.write(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES, FACTORY_DEFAULT_SNOOZE_TIME_MINUTES);
+        EEPROM.write(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED, FACTORY_DEFAULT_HOURLY_BEEP_ENABLED);
+        EEPROM.write(EEPROM_ADDRESS_ALARM_SET_MEMORY, FACTORY_DEFAULT_ALARM_SET_MEMORY);
+        EEPROM.write(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX, FACTORY_DEFAULT_KITCHEN_TIMER);
+        EEPROM.write(EEPROM_ADDRESS_ALARM_HOUR, FACTORY_DEFAULT_ALARM_HOUR);
+        EEPROM.write(EEPROM_ADDRESS_ALARM_MINUTE, FACTORY_DEFAULT_ALARM_MINUTE);
+        EEPROM.write(EEPROM_ADDRESS_EEPROM_VALID, EEPROM_VALID_VALUE);
+        EEPROM.write(EEPROM_ADDRESS_ALARM_IS_SNOOZING, FACTORY_DEFAULT_ALARM_IS_SNOOZING);
+        EEPROM.write(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE, FACTORY_DEFAULT_ALARM_ENABLE_SNOOZE_TIME_DECREASE);
+        EEPROM.write(EEPROM_ADDRESS_ALARM_TUNE, FACTORY_DEFAULT_ALARM_TUNE);
+        buzzer.addNoteToNotesBuffer(C5_1);
+        buzzer.addNoteToNotesBuffer(D5_2);
+        buzzer.addNoteToNotesBuffer(E5_4);
+        buzzer.addNoteToNotesBuffer(F5_8);
+    }
+
+    // get eeprom values
+    alarm_hour = EEPROM.read(EEPROM_ADDRESS_ALARM_HOUR);
+    alarm_minute = EEPROM.read(EEPROM_ADDRESS_ALARM_MINUTE);
+    alarm_snooze_duration_minutes = EEPROM.read(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES);
+    kitchen_timer_set_time_index = EEPROM.read(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX);
+    hourly_beep_enabled = EEPROM.read(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED);
+    enable_snooze_time_decrease = EEPROM.read(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE);
+    uint8_t is_snoozing = EEPROM.read(EEPROM_ADDRESS_ALARM_IS_SNOOZING);
+    uint8_t alarm_enabled = EEPROM.read(EEPROM_ADDRESS_ALARM_SET_MEMORY);
+    alarm_tune_index = EEPROM.read(EEPROM_ADDRESS_ALARM_TUNE);
+    for (uint8_t i = 0; i < 4; i++)
+    {
+        tune_name_buf[i] = pgm_read_byte_near(menu_item_tune_names + 4 * alarm_tune_index + i);
+    }
+    if (alarm_enabled > 64)
+    {
+        alarm_status_state = state_alarm_status_is_enabled;
+    }
+    else
+    {
+        alarm_status_state = state_alarm_status_is_not_enabled;
+    }
+
+    if (is_snoozing > 64)
+    {
+        // if power cut during snoozing, trigger alarm right away at power on.
+        alarm_status_state = state_alarm_status_triggered;
+    }
+
+    nextTimeUpdateMillis = millis();
+    nextBlinkUpdateMillis = millis();
+    nextKitchenBlinkUpdateMillis = millis();
+    nextDisplayTimeUpdateMillis = millis();
+    cycleBrightness(true);
+    main_state = state_display_time;
+    alarm_set_state = state_alarm_init;
+
+    kitchenTimer.setInitCountDownTimeSecs(timeDialDiscreteSeconds[kitchen_timer_set_time_index]);
+    // kitchen_timer_state = state_stopped_refresh_display;
+    blink_offset = 0;
+
+// #define ALARM_DEBUG
+#ifdef ALARM_DEBUG
+#ifdef PROTOTYPE_GRAVITY_RTC
+// sets the alarm to one minute from upload
+//   rtc.read();
+//   alarm_hour = rtc.hour;
+//   alarm_minute = rtc.minute + 1;
+#else
+    alarm_hour = rtcDS3231.getHour(false, false);
+    alarm_minute = rtcDS3231.getMinute();
+#endif
+#endif
+
+    snooze_count = 0;
+    total_snooze_time_minutes = 0;
+
+#ifdef PROTOTYPE_GRAVITY_RTC
+// uint8_t test[32];
+// rtc.readMemory(test);
+//   for (uint8_t i=0;i<32;i++){
+//     Serial.println(test[i]);
+//   }
+#endif
+}
+
+void loop()
+{
+
+    main_application_loop();
 
 #ifdef ENABLE_SERIAL
 #ifdef ENABLE_MEASURE_CYCLE_TIME
     measure_cycle_time();
 #endif
 #endif
-
-    //  rtc.read();
-    //  //*************************Time********************************
-    //  Serial.print("   Year = ");//year
-    //  Serial.print(rtc.year);
-    //  Serial.print("   Month = ");//month
-    //  Serial.print(rtc.month);
-    //  Serial.print("   Day = ");//day
-    //  Serial.print(rtc.day);
-    //  Serial.print("   Week = ");//week
-    //  Serial.print(rtc.week);
-    //  Serial.print("   Hour = ");//hour
-    //  Serial.print(rtc.hour);
-    //  Serial.print("   Minute = ");//minute
-    //  Serial.print(rtc.minute);
-    //  Serial.print("   Second = ");//second
-    //  Serial.println(rtc.second);
-    //  delay(1000);
 }
