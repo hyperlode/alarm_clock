@@ -279,7 +279,7 @@ enum Time_type : uint8_t
 enum Main_state : uint8_t
 {
     state_display_time = 0,
-    state_set_time,
+    state_menu,
     state_night_mode,
     state_alarm_set,
     state_kitchen_timer,
@@ -365,6 +365,12 @@ bool millis_blink_250_750ms()
 {
     // true for shorter part of the second
     return (millis() - blink_offset) % 1000 > 750;
+}
+
+bool millis_blink_100_900ms()
+{
+    // true for shorter part of the second
+    return (millis() - blink_offset) % 1000 > 900;
 }
 
 void set_blink_offset()
@@ -602,7 +608,7 @@ void set_time(Time_type t)
         {
             nextStepRotate(&hour_now, button_up.isPressed(), 0, 23);
             rtcDS3231.setHour(hour_now);
-            
+
             nextBlinkUpdateMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
             blinker = true;
             hour_minutes_to_display();
@@ -692,7 +698,7 @@ void display_time_state_refresh()
     if (button_menu.isPressedEdge())
     {
         // main_state = static_cast<Main_state>(static_cast<int>(main_state) + 1);;
-        main_state = state_set_time;
+        main_state = state_menu;
     }
 
     if (button_kitchen_timer.isPressedEdge())
@@ -705,6 +711,14 @@ void display_time_state_refresh()
     if (button_brightness.isPressedEdge())
     {
         cycleBrightness(false);
+    }
+}
+
+void eeprom_write_byte_if_changed(int address, uint8_t value)
+{
+    if (value != EEPROM.read(address))
+    {
+        EEPROM.write(address, value);
     }
 }
 
@@ -741,6 +755,10 @@ void main_menu_state_refresh()
         }
         if (button_up.isPressedEdge() || button_down.isPressedEdge())
         {
+            // // one cycle through menu and back to main menu.
+            // if (main_menu_item_index == MENU_MENU_ITEMS_COUNT - 1){
+            //     main_menu_state = state_main_menu_exit;
+            // }
             nextStepRotate(&main_menu_item_index, button_down.isPressed(), 0, MENU_MENU_ITEMS_COUNT - 1);
             main_menu_display_update = true;
             set_blink_offset();
@@ -807,22 +825,10 @@ void main_menu_state_refresh()
         {
             main_menu_state = state_main_menu_display_item;
 
-            if (alarm_snooze_duration_minutes != EEPROM.read(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES))
-            {
-                EEPROM.write(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES, alarm_snooze_duration_minutes);
-            }
-            if (hourly_beep_enabled != EEPROM.read(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED))
-            {
-                EEPROM.write(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED, hourly_beep_enabled);
-            }
-            if (enable_snooze_time_decrease != EEPROM.read(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE))
-            {
-                EEPROM.write(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE, enable_snooze_time_decrease);
-            }
-            if (alarm_tune_index != EEPROM.read(EEPROM_ADDRESS_ALARM_TUNE))
-            {
-                EEPROM.write(EEPROM_ADDRESS_ALARM_TUNE, alarm_tune_index);
-            }
+            eeprom_write_byte_if_changed(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES, alarm_snooze_duration_minutes);
+            eeprom_write_byte_if_changed(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED, hourly_beep_enabled);
+            eeprom_write_byte_if_changed(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE, enable_snooze_time_decrease);
+            eeprom_write_byte_if_changed(EEPROM_ADDRESS_ALARM_TUNE, alarm_tune_index);
         }
 
         switch (main_menu_item_index)
@@ -912,6 +918,7 @@ void main_menu_state_refresh()
     }
     }
 }
+
 void set_time_state_refresh()
 {
     switch (set_time_state)
@@ -1128,16 +1135,8 @@ void alarm_set_state_refresh()
         alarm_set_state = state_alarm_init; // prepare for the next time.
         main_state = state_display_time;
 
-        // eeprom only write when changed.
-        if (EEPROM.read(EEPROM_ADDRESS_ALARM_HOUR) != alarm_hour)
-        {
-            EEPROM.write(EEPROM_ADDRESS_ALARM_HOUR, alarm_hour);
-            // Serial.println("write eerprom");
-        }
-        if (EEPROM.read(EEPROM_ADDRESS_ALARM_MINUTE) != alarm_minute)
-        {
-            EEPROM.write(EEPROM_ADDRESS_ALARM_MINUTE, alarm_minute);
-        }
+        eeprom_write_byte_if_changed(EEPROM_ADDRESS_ALARM_HOUR, alarm_hour);
+        eeprom_write_byte_if_changed(EEPROM_ADDRESS_ALARM_MINUTE, alarm_minute);
     }
     break;
     default:
@@ -1165,15 +1164,8 @@ void alarm_status_refresh()
         // set_display_indicator_dot(false);
         snooze_count = 0;
         total_snooze_time_minutes = 0;
-        if (0 != EEPROM.read(EEPROM_ADDRESS_ALARM_SET_MEMORY))
-        {
-            EEPROM.write(EEPROM_ADDRESS_ALARM_SET_MEMORY, 0);
-        }
-
-        if (0 != EEPROM.read(EEPROM_ADDRESS_ALARM_IS_SNOOZING))
-        {
-            EEPROM.write(EEPROM_ADDRESS_ALARM_IS_SNOOZING, 0);
-        }
+        eeprom_write_byte_if_changed(EEPROM_ADDRESS_ALARM_SET_MEMORY, 0);
+        eeprom_write_byte_if_changed(EEPROM_ADDRESS_ALARM_IS_SNOOZING, 0);
     }
     break;
 
@@ -1191,10 +1183,7 @@ void alarm_status_refresh()
         total_snooze_time_minutes = 0;
         // Serial.println("Enable alarm");
 
-        if (255 != EEPROM.read(EEPROM_ADDRESS_ALARM_SET_MEMORY))
-        {
-            EEPROM.write(EEPROM_ADDRESS_ALARM_SET_MEMORY, 255);
-        }
+        eeprom_write_byte_if_changed(EEPROM_ADDRESS_ALARM_SET_MEMORY, 255);
     }
     break;
 
@@ -1213,7 +1202,7 @@ void alarm_status_refresh()
             // alarm going off will interrupt ongoing user operations.
             switch (main_state)
             {
-            case state_set_time:
+            case state_menu:
             {
                 if (set_time_state != state_set_time_hours &&
                     set_time_state != state_set_time_minutes &&
@@ -1308,10 +1297,7 @@ void alarm_status_refresh()
             alarm_minute_snooze = time_stamp_minutes % 60;
 
             alarm_status_state = state_alarm_status_snoozing;
-            if (255 != EEPROM.read(EEPROM_ADDRESS_ALARM_IS_SNOOZING))
-            {
-                EEPROM.write(EEPROM_ADDRESS_ALARM_IS_SNOOZING, 255);
-            }
+            eeprom_write_byte_if_changed(EEPROM_ADDRESS_ALARM_IS_SNOOZING, 255);
 
             buzzer.clearBuzzerNotesBuffer();
         }
@@ -1489,10 +1475,7 @@ void kitchen_timer_state_refresh()
             kitchen_timer_state = state_running;
             kitchenTimer.start();
             buzzer.addNoteToNotesBuffer(G6_4);
-            if (kitchen_timer_set_time_index != EEPROM.read(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX))
-            {
-                EEPROM.write(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX, kitchen_timer_set_time_index);
-            }
+            eeprom_write_byte_if_changed(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX, kitchen_timer_set_time_index);
         }
         if (millis() > nextKitchenBlinkUpdateMillis)
         {
@@ -1623,16 +1606,11 @@ void refresh_main_state()
         display_time_state_refresh();
     }
     break;
-    case state_set_time:
+    case state_menu:
     {
         main_menu_state_refresh();
     }
     break;
-    // case state_set_time:
-    // {
-    //     set_time_state_refresh();
-    // }
-    // break;
     case state_night_mode:
     {
         // todo rework. this is not a good way. Dark mode should just skip visuals update, and if a button pressed, allow visual update until depressed.
@@ -1777,23 +1755,23 @@ void setup()
 
 #ifdef PROTOTYPE_GRAVITY_RTC
     //  for (int i=0; i<5; i++){
-        //  rtc.read();
-        //  //*************************Time********************************
-        //  Serial.print("   Year = ");//year
-        //  Serial.print(rtc.year);
-        //  Serial.print("   Month = ");//month
-        //  Serial.print(rtc.month);
-        //  Serial.print("   Day = ");//day
-        //  Serial.print(rtc.day);
-        //  Serial.print("   Week = ");//week
-        //  Serial.print(rtc.week);
-        //  Serial.print("   Hour = ");//hour
-        //  Serial.print(rtc.hour);
-        //  Serial.print("   Minute = ");//minute
-        //  Serial.print(rtc.minute);
-        //  Serial.print("   Second = ");//second
-        //  Serial.println(rtc.second);
-        //  delay(1000);
+    //  rtc.read();
+    //  //*************************Time********************************
+    //  Serial.print("   Year = ");//year
+    //  Serial.print(rtc.year);
+    //  Serial.print("   Month = ");//month
+    //  Serial.print(rtc.month);
+    //  Serial.print("   Day = ");//day
+    //  Serial.print(rtc.day);
+    //  Serial.print("   Week = ");//week
+    //  Serial.print(rtc.week);
+    //  Serial.print("   Hour = ");//hour
+    //  Serial.print(rtc.hour);
+    //  Serial.print("   Minute = ");//minute
+    //  Serial.print(rtc.minute);
+    //  Serial.print("   Second = ");//second
+    //  Serial.println(rtc.second);
+    //  delay(1000);
     //}
 #else
 
