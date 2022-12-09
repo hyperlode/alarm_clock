@@ -1,5 +1,5 @@
 
-#define ENABLE_SERIAL
+// #define ENABLE_SERIAL
 // #define ENABLE_MEASURE_CYCLE_TIME
 // #define PROTOTYPE_BIG_BOX
 // #define PROTOTYPE_GRAVITY_RTC
