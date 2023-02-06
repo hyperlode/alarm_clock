@@ -2576,23 +2576,6 @@
     (uuid ff0b0d71-0722-460e-a753-e0ce9c64e0ed)
   )
 
-  (symbol (lib_id "digital_clock:MountingHole") (at 156.21 191.77 0) (unit 1)
-    (in_bom yes) (on_board yes) (fields_autoplaced)
-    (uuid 0024a8c6-9f6d-449f-b8b7-4d233b38f166)
-    (property "Reference" "H4" (id 0) (at 158.75 190.4999 0)
-      (effects (font (size 1.27 1.27)) (justify left))
-    )
-    (property "Value" "MountingHole" (id 1) (at 158.75 193.0399 0)
-      (effects (font (size 1.27 1.27)) (justify left))
-    )
-    (property "Footprint" "Luciebox:MountingHole_4.3mm_M4" (id 2) (at 156.21 191.77 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Datasheet" "~" (id 3) (at 156.21 191.77 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-  )
-
   (symbol (lib_id "jlcpcb-basic-capacitor:0603,100nF,50V,X7R ") (at 246.38 38.1 180) (unit 1)
     (in_bom yes) (on_board yes) (fields_autoplaced)
     (uuid 006cfb41-10d0-41b9-9a7c-f3b9fde4f331)
@@ -2948,23 +2931,6 @@
     (pin "1" (uuid 243b6a65-0a8e-49c5-946e-ec0963c5b572))
     (pin "2" (uuid aaf31c1a-6326-4619-aed3-f6abb6c7442d))
     (pin "3" (uuid ffcc26a1-40cb-4df6-ab5c-1d5c44043030))
-  )
-
-  (symbol (lib_id "digital_clock:MountingHole") (at 156.21 180.34 0) (unit 1)
-    (in_bom yes) (on_board yes) (fields_autoplaced)
-    (uuid 4cc7c4ed-f40f-4be8-a362-8f14caa2d011)
-    (property "Reference" "H2" (id 0) (at 158.75 179.0699 0)
-      (effects (font (size 1.27 1.27)) (justify left))
-    )
-    (property "Value" "MountingHole" (id 1) (at 158.75 181.6099 0)
-      (effects (font (size 1.27 1.27)) (justify left))
-    )
-    (property "Footprint" "Luciebox:MountingHole_4.3mm_M4" (id 2) (at 156.21 180.34 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Datasheet" "~" (id 3) (at 156.21 180.34 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
   )
 
   (symbol (lib_id "Luciebox_components:Crystal-Device") (at 261.62 87.63 270) (unit 1)
@@ -3995,14 +3961,8 @@
     (path "/eae243bb-ff74-4800-bc08-3d183194a9b6"
       (reference "H1") (unit 1) (value "MountingHole") (footprint "Luciebox:MountingHole_4.3mm_M4")
     )
-    (path "/4cc7c4ed-f40f-4be8-a362-8f14caa2d011"
-      (reference "H2") (unit 1) (value "MountingHole") (footprint "Luciebox:MountingHole_4.3mm_M4")
-    )
     (path "/2ff5e44d-1c39-4cc7-9a27-d0df9a66cdaf"
       (reference "H3") (unit 1) (value "MountingHole") (footprint "Luciebox:MountingHole_4.3mm_M4")
-    )
-    (path "/0024a8c6-9f6d-449f-b8b7-4d233b38f166"
-      (reference "H4") (unit 1) (value "MountingHole") (footprint "Luciebox:MountingHole_4.3mm_M4")
     )
     (path "/086877e6-a6d1-4b60-b3a6-6372a409a809"
       (reference "J1") (unit 1) (value "USB_B_Mini") (footprint "Luciebox:usb_mini_Molex-0548190519")
