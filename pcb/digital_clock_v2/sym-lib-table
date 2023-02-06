@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name "digital_clock")(type "KiCad")(uri "E:/GIT/Arduino repos/arduino_uno_digital_clock/pcb/components/digital_clock.kicad_sym")(options "")(descr ""))
+  (lib (name "Luciebox_components")(type "Legacy")(uri "E:/GIT/Arduino repos/luciebox/pcb/Luciebox_v5/Luciebox_components/Luciebox_components.lib")(options "")(descr ""))
+)
