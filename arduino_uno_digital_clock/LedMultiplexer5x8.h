@@ -56,6 +56,9 @@ private:
     byte SegmentPins[8];
     byte digitValues[5];
 
+
+    // byte activeSegmentsToDelay
+
     uint8_t ddr_bcd_buffer[3];
 
     // boolean lights[5][8];
