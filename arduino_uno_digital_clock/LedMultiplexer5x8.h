@@ -57,8 +57,10 @@ private:
     byte digitValues[5];
 
 
-    // byte activeSegmentsToDelay
-
+    
+    byte activeSegmentsCount;
+    byte digitLightUpCycles;
+    byte allOffCycles;
     uint8_t ddr_bcd_buffer[3];
 
     // boolean lights[5][8];
