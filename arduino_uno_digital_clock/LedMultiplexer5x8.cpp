@@ -336,8 +336,9 @@ void LedMultiplexer5x8::setPinFunction(int pin, bool outputElseInput)
 void LedMultiplexer5x8::refresh()
 {
 
-    // const byte activeSegmentsCountToDelay[8] = {0,0,200,0,0,0,0,0}; // not every segment has a diode. If less segments are lit up, the segments are brighter. This needs to be countered.
-    const byte activeSegmentsCountToDelay[8] = {20, 20, 0, 20, 20, 20, 20, 20}; // not every segment has a diode. If less segments are lit up, the segments are brighter. This needs to be countered.
+    
+    const byte activeSegmentsCountToDelay[8] = {10, 10, 1, 3, 4, 6, 10, 10}; // number of on cycles. lower is less bright// not every segment has a diode. If less segments are lit up, the segments are brighter. This needs to be countered.
+    // const byte activeSegmentsCountToDelay[8] = {1,1,1,1,1,1,1,1}; // not every segment has a diode. If less segments are lit up, the segments are brighter. This needs to be countered.
 
     bool updateNextDigit = false;
     
@@ -359,6 +360,7 @@ void LedMultiplexer5x8::refresh()
         allOffCycles++;
     }
 
+    // if (allOffCycles > this->brightness)
     if (allOffCycles > this->brightness)
     {
 

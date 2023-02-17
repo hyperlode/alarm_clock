@@ -390,7 +390,8 @@ void cycleBrightness(bool init)
 #elif (BRIGHTNESS_LEVELS == 3)
     // uint8_t brightness_settings[] = {0, 1, 10, 254}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
     // uint8_t brightness_settings[] = {0, 50, 80, 200}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
-    uint8_t brightness_settings[] = {200, 90, 10, 0}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
+    // uint8_t brightness_settings[] = {200, 90, 10, 0}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
+    uint8_t brightness_settings[] = {100, 15, 2, 0}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
 #endif
 
 #ifdef CYCLING_GOES_BRIGHTER
