@@ -329,52 +329,104 @@ void LedMultiplexer5x8::setPinFunction(int pin, bool outputElseInput)
     }
 }
 
-// Refresh Display
-/*******************************************************************************************/
-// Cycles through each segment and turns on the correct digits for each.
-// Leaves everything off
+// // Refresh Display
+// /*******************************************************************************************/
+// // Cycles through each segment and turns on the correct digits for each.
+// // Leaves everything off
+// void LedMultiplexer5x8::refresh()
+// {
+
+//     const byte activeSegmentsCountToDelay[8] = {10, 10, 1, 3, 4, 6, 10, 10}; // number of on cycles. lower is less bright// not every segment has a diode. If less segments are lit up, the segments are brighter. This needs to be countered.
+//     // const byte activeSegmentsCountToDelay[8] = {1,1,1,1,1,1,1,1}; // not every segment has a diode. If less segments are lit up, the segments are brighter. This needs to be countered.
+
+//     bool updateNextDigit = false;
+
+//     if (digitLightUpCycles < activeSegmentsCountToDelay[activeSegmentsCount])
+//     {
+//         digitLightUpCycles++;
+//     }
+//     else if (digitLightUpCycles == activeSegmentsCountToDelay[activeSegmentsCount])
+//     {
+
+//         // turn digits off.
+//         for (byte digit = 0; digit < DIGITS_COUNT; digit++)
+//         {
+//             digitalWrite(DigitPins[digit], DIGITOFF);
+//         }
+
+//         digitActive++;
+//         digitLightUpCycles++;
+//     }
+//     else if (digitLightUpCycles > activeSegmentsCountToDelay[activeSegmentsCount])
+//     {
+
+//         if (digitActive > 3)
+//         {
+//             allOffCycles++;
+//             if (allOffCycles > this->brightness)
+//             {
+
+//                 // turn segments off
+//                 for (byte segment = 0; segment < 8; segment++)
+//                 {
+//                     digitalWrite(SegmentPins[segment], SEGMENTOFF);
+//                 }
+
+//                 // Turn the relevant digit on
+//                 digitalWrite(DigitPins[digitActive], DIGITON);
+
+//                 activeSegmentsCount = 0; // reset active segments counter
+
+//                 // turn relevant segments on (of the active digit)
+//                 for (byte segment = 0; segment < 8; segment++)
+//                 {
+//                     if (getBit(&digitValues[digitActive], segment))
+//                     {
+//                         digitalWrite(SegmentPins[segment], SEGMENTON);
+//                         // if (activeSegmentsCount%2 == 0){
+//                         // digitalWrite(SegmentPins[segment], SEGMENTON);
+//                         // }else{
+//                         // digitalWrite(SegmentPins[segment], SEGMENTOFF);
+//                         // }
+
+//                         activeSegmentsCount++;
+//                     }
+//                 }
+
+//                 digitLightUpCycles = 0;
+//                 allOffCycles = 0;
+//             }
+//         }
+//     }
+// }
+
 void LedMultiplexer5x8::refresh()
 {
-
-    
+    // const byte activeSegmentsCountToDelay[8] = {1,1,1,1,1,1,1,1}; // number of on cycles. lower is less bright// not every segment has a diode. If less segments are lit up, the segments are brighter. This needs to be countered.
     const byte activeSegmentsCountToDelay[8] = {10, 10, 1, 3, 4, 6, 10, 10}; // number of on cycles. lower is less bright// not every segment has a diode. If less segments are lit up, the segments are brighter. This needs to be countered.
-    // const byte activeSegmentsCountToDelay[8] = {1,1,1,1,1,1,1,1}; // not every segment has a diode. If less segments are lit up, the segments are brighter. This needs to be countered.
+    ticker++;
 
-    bool updateNextDigit = false;
-    
-    if (digitLightUpCycles < activeSegmentsCountToDelay[activeSegmentsCount])
+    switch (stateMultiplexer)
     {
-        digitLightUpCycles++;
-    }
-    else if (digitLightUpCycles == activeSegmentsCountToDelay[activeSegmentsCount])
+
+    case StateMultiplexer::state_all_off:
+
     {
-        digitLightUpCycles++;
-        // turn digits off.
-        for (byte digit = 0; digit < DIGITS_COUNT; digit++)
+        if (ticker >= this->brightness)
         {
-            digitalWrite(DigitPins[digit], DIGITOFF);
+            stateMultiplexer = StateMultiplexer::state_setup_digit;
         }
+        break;
     }
-    else if (digitLightUpCycles > activeSegmentsCountToDelay[activeSegmentsCount])
+    case StateMultiplexer::state_setup_digit:
     {
-        allOffCycles++;
-    }
-
-    // if (allOffCycles > this->brightness)
-    if (allOffCycles > this->brightness)
-    {
-
         // turn segments off
         for (byte segment = 0; segment < 8; segment++)
         {
             digitalWrite(SegmentPins[segment], SEGMENTOFF);
         }
 
-        digitActive++;
-        if (digitActive > 3)
-        {
-            digitActive = 0;
-        }
+      
 
         // Turn the relevant digit on
         digitalWrite(DigitPins[digitActive], DIGITON);
@@ -387,22 +439,184 @@ void LedMultiplexer5x8::refresh()
             if (getBit(&digitValues[digitActive], segment))
             {
                 digitalWrite(SegmentPins[segment], SEGMENTON);
-                // if (activeSegmentsCount%2 == 0){
-                // digitalWrite(SegmentPins[segment], SEGMENTON);
-                // }else{
-                // digitalWrite(SegmentPins[segment], SEGMENTOFF);
-                // }
-
                 activeSegmentsCount++;
             }
         }
-
-        digitLightUpCycles = 0;
-        allOffCycles = 0;
+        ticker = 0;
+        stateMultiplexer = StateMultiplexer::state_digit_on;
+        break;
     }
+    case StateMultiplexer::state_digit_on:
+    {
+        if (ticker > activeSegmentsCountToDelay[activeSegmentsCount])
+        {
+            // turn digits off.
+            for (byte digit = 0; digit < DIGITS_COUNT; digit++)
+            {
+                digitalWrite(DigitPins[digit], DIGITOFF);
+            }
 
-    // bufferToOutputPins();
+            digitActive++;
+            if (digitActive > 3)
+            {
+                digitActive = 0;
+                ticker = 0;
+                stateMultiplexer = StateMultiplexer::state_all_off;
+            }else{
+                ticker = 0;
+                stateMultiplexer = StateMultiplexer::state_setup_digit;
+
+            }
+
+
+        }
+
+        break;
+    }
+    
+    }
 }
+// void LedMultiplexer5x8::refresh()
+// {
+//     const byte activeSegmentsCountToDelay[8] = {10, 10, 1, 3, 4, 6, 10, 10}; // number of on cycles. lower is less bright// not every segment has a diode. If less segments are lit up, the segments are brighter. This needs to be countered.
+//     ticker++;
+
+//     switch (stateMultiplexer)
+//     {
+
+//     case StateMultiplexer::state_all_off:
+
+//     {
+//         if (ticker >= this->brightness)
+//         {
+//             stateMultiplexer = StateMultiplexer::state_setup_digit;
+//         }
+//         break;
+//     }
+//     case StateMultiplexer::state_setup_digit:
+//     {
+//         // turn segments off
+//         for (byte segment = 0; segment < 8; segment++)
+//         {
+//             digitalWrite(SegmentPins[segment], SEGMENTOFF);
+//         }
+
+//         digitActive++;
+//         if (digitActive > 3)
+//         {
+//             digitActive = 0;
+//         }
+
+//         // Turn the relevant digit on
+//         digitalWrite(DigitPins[digitActive], DIGITON);
+
+//         activeSegmentsCount = 0; // reset active segments counter
+
+//         // turn relevant segments on (of the active digit)
+//         for (byte segment = 0; segment < 8; segment++)
+//         {
+//             if (getBit(&digitValues[digitActive], segment))
+//             {
+//                 digitalWrite(SegmentPins[segment], SEGMENTON);
+//                 activeSegmentsCount++;
+//             }
+//         }
+//         ticker = 0;
+//         stateMultiplexer = StateMultiplexer::state_digit_on;
+//         break;
+//     }
+//     case StateMultiplexer::state_digit_on:
+//     {
+//         if (ticker > activeSegmentsCountToDelay[activeSegmentsCount])
+//         {
+//             // turn digits off.
+//             for (byte digit = 0; digit < DIGITS_COUNT; digit++)
+//             {
+//                 digitalWrite(DigitPins[digit], DIGITOFF);
+//             }
+
+//             ticker = 0;
+//             stateMultiplexer = StateMultiplexer::state_all_off;
+//         }
+
+//         break;
+//     }
+    
+//     }
+// }
+// // Refresh Display
+// /*******************************************************************************************/
+// // Cycles through each segment and turns on the correct digits for each.
+// // Leaves everything off
+// void LedMultiplexer5x8::refresh()
+// {
+
+//     const byte activeSegmentsCountToDelay[8] = {10, 10, 1, 3, 4, 6, 10, 10}; // number of on cycles. lower is less bright// not every segment has a diode. If less segments are lit up, the segments are brighter. This needs to be countered.
+//     // const byte activeSegmentsCountToDelay[8] = {1,1,1,1,1,1,1,1}; // not every segment has a diode. If less segments are lit up, the segments are brighter. This needs to be countered.
+
+//     bool updateNextDigit = false;
+
+//     if (digitLightUpCycles < activeSegmentsCountToDelay[activeSegmentsCount])
+//     {
+//         digitLightUpCycles++;
+//     }
+//     else if (digitLightUpCycles == activeSegmentsCountToDelay[activeSegmentsCount])
+//     {
+//         digitLightUpCycles++;
+//         // turn digits off.
+//         for (byte digit = 0; digit < DIGITS_COUNT; digit++)
+//         {
+//             digitalWrite(DigitPins[digit], DIGITOFF);
+//         }
+//     }
+//     else if (digitLightUpCycles > activeSegmentsCountToDelay[activeSegmentsCount])
+//     {
+//         allOffCycles++;
+//     }
+
+//     if (allOffCycles > this->brightness)
+//     {
+
+//         // turn segments off
+//         for (byte segment = 0; segment < 8; segment++)
+//         {
+//             digitalWrite(SegmentPins[segment], SEGMENTOFF);
+//         }
+
+//         digitActive++;
+//         if (digitActive > 3)
+//         {
+//             digitActive = 0;
+//         }
+
+//         // Turn the relevant digit on
+//         digitalWrite(DigitPins[digitActive], DIGITON);
+
+//         activeSegmentsCount = 0; // reset active segments counter
+
+//         // turn relevant segments on (of the active digit)
+//         for (byte segment = 0; segment < 8; segment++)
+//         {
+//             if (getBit(&digitValues[digitActive], segment))
+//             {
+//                 digitalWrite(SegmentPins[segment], SEGMENTON);
+//                 // if (activeSegmentsCount%2 == 0){
+//                 // digitalWrite(SegmentPins[segment], SEGMENTON);
+//                 // }else{
+//                 // digitalWrite(SegmentPins[segment], SEGMENTOFF);
+//                 // }
+
+//                 activeSegmentsCount++;
+//             }
+//         }
+
+//         digitLightUpCycles = 0;
+//         allOffCycles = 0;
+//     }
+// }
+
+
+
 // void LedMultiplexer5x8::refresh()
 // {
 // //       turn everything off at the start to reduce flickering.

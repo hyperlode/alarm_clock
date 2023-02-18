@@ -391,7 +391,9 @@ void cycleBrightness(bool init)
     // uint8_t brightness_settings[] = {0, 1, 10, 254}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
     // uint8_t brightness_settings[] = {0, 50, 80, 200}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
     // uint8_t brightness_settings[] = {200, 90, 10, 0}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
-    uint8_t brightness_settings[] = {100, 15, 2, 0}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
+    // uint8_t brightness_settings[] = {100, 15, 2, 0}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
+    // uint8_t brightness_settings[] = {100, 254, 50, 0}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
+    uint8_t brightness_settings[] = {100, 255, 100, 0}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
 #endif
 
 #ifdef CYCLING_GOES_BRIGHTER
@@ -1743,14 +1745,18 @@ void main_application_loop()
     // input
     button_0.refresh();
     button_1.refresh();
+    ledDisplay.refresh();
     button_2.refresh();
     button_3.refresh();
-
+    
+    ledDisplay.refresh();
+    
     // process
     updateTimeNow();
     checkWatchDog();
     checkHourlyBeep();
     refresh_main_state();
+    ledDisplay.refresh();
     refresh_indicator_dot();
     alarm_status_refresh(); // needs to go after main state loop (to check for button press at time of alarm triggered not doing normal alarm function)
     alarm_kitchen_timer_refresh();
