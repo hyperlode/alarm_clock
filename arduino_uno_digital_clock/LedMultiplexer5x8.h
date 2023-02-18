@@ -37,7 +37,7 @@ public:
     //void SetDecPointSingle(boolean decDig, int digit);
     //void setLedArray(byte ledsAsBits);
 
-    void setBrightness(byte value, bool exponential);
+    void setBrightness(uint16_t value, bool exponential);
     bool getMode();
 
     //Public Variables
@@ -49,7 +49,7 @@ private:
 
     //Private Variables
     // boolean mode,DigitOn,DigitOff,SegOn,SegOff;
-    uint8_t brightness;
+    uint16_t brightness;
 
     uint32_t test;
     byte DigitPins[5];

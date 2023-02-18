@@ -388,12 +388,8 @@ void cycleBrightness(bool init)
 #if (BRIGHTNESS_LEVELS == 4)
     uint8_t brightness_settings[] = {0, 1, 10, 80, 254}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
 #elif (BRIGHTNESS_LEVELS == 3)
-    // uint8_t brightness_settings[] = {0, 1, 10, 254}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
-    // uint8_t brightness_settings[] = {0, 50, 80, 200}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
-    // uint8_t brightness_settings[] = {200, 90, 10, 0}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
-    // uint8_t brightness_settings[] = {100, 15, 2, 0}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
-    // uint8_t brightness_settings[] = {100, 254, 50, 0}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
-    uint8_t brightness_settings[] = {100, 255, 100, 0}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
+    // uint16_t brightness_settings[] = {100, 300, 100, 0}; 
+    uint16_t brightness_settings[] = {100, 300, 100, 0}; // 0 is brighter 
 #endif
 
 #ifdef CYCLING_GOES_BRIGHTER
@@ -1496,7 +1492,9 @@ void kitchen_timer_state_refresh()
     case (state_stopped):
     {
         if (button_kitchen_timer.isPressedEdge() || ((button_kitchen_timer.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_kitchen_timer.getLongPressPeriodicalEdge()))
+        // if (button_kitchen_timer.isPressedEdge() )
         {
+            button_kitchen_timer.setLongPressCount(666); // effectively disable more long press detections. This fixes the start/stop bug (because it still detects a long press from when it was started/stopped if activated with a normal edge.)
             kitchen_timer_state = state_running;
             kitchenTimer.start();
             buzzer.addNoteToNotesBuffer(G6_4);
@@ -1539,6 +1537,7 @@ void kitchen_timer_state_refresh()
         }
         else if (button_kitchen_timer.isPressedEdge() || ((button_kitchen_timer.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_kitchen_timer.getLongPressPeriodicalEdge()))
         {
+            button_kitchen_timer.setLongPressCount(666); // effectively disable more long press detections. This fixes the start/stop bug (because it still detects a long press from when it was started/stopped if activated with a normal edge.)
             kitchenTimer.reset();
             kitchen_timer_state = state_stopped_refresh_display;
             buzzer.addNoteToNotesBuffer(C6_4);

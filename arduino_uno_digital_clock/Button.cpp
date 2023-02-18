@@ -40,6 +40,11 @@ int16_t Button::getLongPressCount()
     return longPressEdgeCount;
 }
 
+void Button::setLongPressCount(uint16_t fakeLongPressCountPeriods)
+{
+    longPressEdgeCount = fakeLongPressCountPeriods;
+}
+
 bool Button::getLongPressPeriodicalEdge()
 {
     //   bool edge_detected;

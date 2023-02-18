@@ -28,6 +28,7 @@ class Button: public BinaryInput{
     bool isUnpressedEdge();
     bool getLongPressPeriodicalEdge();
     int16_t getLongPressCount();
+    void setLongPressCount(uint16_t fakeLongPressCountPeriods);
 
     long longPressStartMillis;
     int16_t longPressEdgeCount;

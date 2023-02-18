@@ -725,7 +725,7 @@ void LedMultiplexer5x8::refresh()
 //    bufferToOutputPins();
 // }
 
-void LedMultiplexer5x8::setBrightness(byte value, bool exponential)
+void LedMultiplexer5x8::setBrightness(uint16_t value, bool exponential)
 {
     // brightness: 0 = max, the higher, the more delay.
     // smaller number is brighter
@@ -738,11 +738,11 @@ void LedMultiplexer5x8::setBrightness(byte value, bool exponential)
     {
         brightness_tmp = value;
     }
-    if (brightness_tmp > 255)
-    {
-        brightness_tmp = 255;
-    }
-    this->brightness = (uint8_t)brightness_tmp;
+    // if (brightness_tmp > 255)
+    // {
+    //     brightness_tmp = 255;
+    // }
+    this->brightness = brightness_tmp;
 }
 
 byte *LedMultiplexer5x8::getDigits()
