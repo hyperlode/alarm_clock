@@ -137,9 +137,9 @@ bool beep_memory;
 long alarm_started_millis;
 
 long nextTimeUpdateMillis;
-long nextBlinkUpdateMillis;
+long blinkUpdateDelayStartMillis;
 long nextKitchenBlinkUpdateMillis;
-long nextDisplayTimeUpdateMillis;
+long displayUpdateDelayStartMillis;
 long blink_offset;
 
 bool display_dot_status_memory;
@@ -592,7 +592,7 @@ void set_time(Time_type t)
         if (t == hours)
         {
             nextStepRotate(&rtc.hour, button_up.isPressed(), 0, 23);
-            nextBlinkUpdateMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinkUpdateDelayStartMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
             blinker = true;
             hour_minutes_to_display();
             hour_now = rtc.hour;
@@ -600,7 +600,7 @@ void set_time(Time_type t)
         else if (t == minutes)
         {
             nextStepRotate(&rtc.minute, button_up.isPressed(), 0, 59);
-            nextBlinkUpdateMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinkUpdateDelayStartMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
             blinker = true;
             hour_minutes_to_display();
             minute_now = rtc.minute;
@@ -608,7 +608,7 @@ void set_time(Time_type t)
         else if (t == seconds)
         {
             rtc.second = 0;
-            nextBlinkUpdateMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinkUpdateDelayStartMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
             blinker = true;
             seconds_to_display();
             second_now = rtc.second;
@@ -621,7 +621,7 @@ void set_time(Time_type t)
             nextStepRotate(&hour_now, button_up.isPressed(), 0, 23);
             rtcDS3231.setHour(hour_now);
 
-            nextBlinkUpdateMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinkUpdateDelayStartMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
             blinker = true;
             hour_minutes_to_display();
         }
@@ -629,7 +629,7 @@ void set_time(Time_type t)
         {
             nextStepRotate(&minute_now, button_up.isPressed(), 0, 59);
             rtcDS3231.setMinute(minute_now);
-            nextBlinkUpdateMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinkUpdateDelayStartMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
             blinker = true;
             hour_minutes_to_display();
         }
@@ -638,7 +638,7 @@ void set_time(Time_type t)
             rtcDS3231.setSecond(0);
             second_now = rtcDS3231.getSecond();
 
-            nextBlinkUpdateMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinkUpdateDelayStartMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
             blinker = true;
             seconds_to_display();
         }
@@ -646,10 +646,10 @@ void set_time(Time_type t)
         // display updated time here. Even in the "off time" of the blinking process, it will still display the change for the remainder of the off-time. This is good.
     }
 
-    if (millis() > nextBlinkUpdateMillis)
+    if (millis() - blinkUpdateDelayStartMillis > TIME_HALF_BLINK_PERIOD_MILLIS)
     {
 
-        nextBlinkUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
+        blinkUpdateDelayStartMillis = millis();
 
         if (t == hours)
         {
@@ -689,9 +689,9 @@ void set_time(Time_type t)
 void display_time_state_refresh()
 {
 
-    if (millis() > nextDisplayTimeUpdateMillis)
+    if (millis() - displayUpdateDelayStartMillis  > TIME_UPDATE_DELAY)  // https://arduino.stackexchange.com/questions/12587/how-can-i-handle-the-millis-rollover
     {
-        nextDisplayTimeUpdateMillis = millis() + TIME_UPDATE_DELAY;
+        displayUpdateDelayStartMillis = millis();
 
         hour_minutes_to_display();
     }
@@ -969,9 +969,9 @@ void set_time_state_refresh()
     break;
     case state_display_minutes_seconds:
     {
-        if (millis() > nextBlinkUpdateMillis)
+        if (millis() - blinkUpdateDelayStartMillis > TIME_HALF_BLINK_PERIOD_MILLIS)
         {
-            nextBlinkUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinkUpdateDelayStartMillis = millis();
             minutes_seconds_to_display();
         }
     }
@@ -1112,7 +1112,7 @@ void alarm_set_state_refresh()
         if (button_up.isPressedEdge() || button_down.isPressedEdge() || button_up.getLongPressPeriodicalEdge() || button_down.getLongPressPeriodicalEdge())
         {
             nextStepRotate(&alarm_hour, button_up.isPressed(), 0, 23);
-            nextBlinkUpdateMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinkUpdateDelayStartMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
             blinker = true;
         }
         if (button_alarm.isPressedEdge())
@@ -1121,9 +1121,9 @@ void alarm_set_state_refresh()
             display_alarm();
         }
 
-        if (millis() > nextBlinkUpdateMillis)
+        if (millis() - blinkUpdateDelayStartMillis > TIME_HALF_BLINK_PERIOD_MILLIS)
         {
-            nextBlinkUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinkUpdateDelayStartMillis = millis();
             display_alarm();
             blinker = !blinker;
             if (blinker)
@@ -1140,7 +1140,7 @@ void alarm_set_state_refresh()
         {
             nextStepRotate(&alarm_minute, button_up.isPressed(), 0, 59);
             display_alarm();
-            nextBlinkUpdateMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinkUpdateDelayStartMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
             blinker = true;
 #ifdef PROTOTYPE_GRAVITY_RTC
 
@@ -1156,9 +1156,9 @@ void alarm_set_state_refresh()
             // alarm_set_state = state_alarm_display;
             alarm_set_state = state_alarm_end;
         }
-        if (millis() > nextBlinkUpdateMillis)
+        if (millis() - blinkUpdateDelayStartMillis > TIME_HALF_BLINK_PERIOD_MILLIS)
         {
-            nextBlinkUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
+            blinkUpdateDelayStartMillis = millis();
             display_alarm();
             blinker = !blinker;
             if (blinker)
@@ -1940,9 +1940,9 @@ void setup()
     }
 
     nextTimeUpdateMillis = millis();
-    nextBlinkUpdateMillis = millis();
+    blinkUpdateDelayStartMillis = millis();
     nextKitchenBlinkUpdateMillis = millis();
-    nextDisplayTimeUpdateMillis = millis();
+    displayUpdateDelayStartMillis = millis();
     cycleBrightness(true);
     main_state = state_display_time;
     alarm_set_state = state_alarm_init;
