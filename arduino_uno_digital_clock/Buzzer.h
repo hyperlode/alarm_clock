@@ -325,7 +325,8 @@ private:
     uint8_t buzzerNotesBuffer[BUZZER_NOTES_BUFFER_LENGTH];
     uint8_t bufferPlayIndex;
     uint8_t bufferProgramIndex;
-    unsigned long soundFinishedTimeMillis;
+    unsigned long tonePlayingStartMillis;
+    unsigned long toneLength_playing;
 
     bool noteFinishedEdge;
 };

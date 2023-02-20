@@ -7,16 +7,17 @@ Buzzer::Buzzer()
 {
     //constructor
     clearBuzzerNotesBuffer();
-    this->soundFinishedTimeMillis = 0;
+    this->tonePlayingStartMillis = 0;
     this->speedScale = 1;
     this->transpose = 0;
+    this->toneLength_playing = 0;
 }
 
 void Buzzer::clearBuzzerNotesBuffer()
 {
     bufferPlayIndex = 1;
     bufferProgramIndex = 0;
-    this->soundFinishedTimeMillis = millis(); //ready to right away detect new sounds from buffer
+    this->tonePlayingStartMillis = millis(); //ready to right away detect new sounds from buffer
 }
 
 void Buzzer::changeTranspose(int8_t delta)
@@ -86,7 +87,7 @@ void Buzzer::checkAndPlayNotesBuffer()
     //0 stands for free and programmable
     //one bufferPlayIndex
     //delay(100);
-    if (millis() > this->soundFinishedTimeMillis)
+    if (millis() - this->tonePlayingStartMillis > toneLength_playing)  //https://arduino.stackexchange.com/questions/12587/how-can-i-handle-the-millis-rollover
     {
         if (this->getNextProgramIndex() != this->bufferPlayIndex)
         {
@@ -120,9 +121,9 @@ void Buzzer::checkAndPlayNotesBuffer()
                 this->buzzerSilent();
             }
 
-            unsigned long toneLength = (unsigned long)(this->speedScale * BUZZER_NOTES_BUFFER_EIGHTNOTE_DURATION_MILLIS * eight_notes_length_multiplier);
+            toneLength_playing = (unsigned long)(this->speedScale * BUZZER_NOTES_BUFFER_EIGHTNOTE_DURATION_MILLIS * eight_notes_length_multiplier);
 
-            this->soundFinishedTimeMillis = millis() + toneLength;
+            this->tonePlayingStartMillis = millis();
 
             //move active slot
             this->bufferPlayIndex = this->getNextPlayIndex();

@@ -136,7 +136,7 @@ bool beep_memory;
 
 long alarm_started_millis;
 
-long nextTimeUpdateMillis;
+long updateTimeDelayStartMillis;
 long blinkUpdateDelayStartMillis;
 long nextKitchenBlinkUpdateMillis;
 long displayUpdateDelayStartMillis;
@@ -483,10 +483,11 @@ void refresh_indicator_dot()
         set_display_indicator_dot(true);
     }
 
-    else if (main_state == state_dark_mode ){
-        // do not set here. 
+    else if (main_state == state_dark_mode)
+    {
+        // do not set here.
     }
-    else if (main_state == state_display_time )
+    else if (main_state == state_display_time)
     {
 
         if (kitchenTimer.getIsStarted())
@@ -689,7 +690,7 @@ void set_time(Time_type t)
 void display_time_state_refresh()
 {
 
-    if (millis() - displayUpdateDelayStartMillis  > TIME_UPDATE_DELAY)  // https://arduino.stackexchange.com/questions/12587/how-can-i-handle-the-millis-rollover
+    if (millis() - displayUpdateDelayStartMillis > TIME_UPDATE_DELAY) // https://arduino.stackexchange.com/questions/12587/how-can-i-handle-the-millis-rollover
     {
         displayUpdateDelayStartMillis = millis();
 
@@ -761,7 +762,7 @@ void main_menu_state_refresh()
             main_menu_state = state_main_menu_modify_item;
             time_set_index_helper = 0;
         }
-        if (button_exit.isPressedEdge() || (millis() -  watchdog_last_button_press_millis > MAIN_MENU_DISPLAY_ITEMS_AUTO_ESCAPE_MILLIS))
+        if (button_exit.isPressedEdge() || (millis() - watchdog_last_button_press_millis > MAIN_MENU_DISPLAY_ITEMS_AUTO_ESCAPE_MILLIS))
         {
             main_menu_state = state_main_menu_exit;
         }
@@ -1354,10 +1355,10 @@ void alarm_status_refresh()
             alarm_status_state = state_alarm_status_triggered;
         }
         if (button_alarm.isPressed() &&
-            millis() > (button_alarm.getLastStateChangeMillis() + ALARM_USER_STOP_BUTTON_PRESS_MILLIS))
-        {
-            alarm_status_state = state_alarm_status_disable;
-        }
+            millis() - button_alarm.getLastStateChangeMillis() > ALARM_USER_STOP_BUTTON_PRESS_MILLIS))
+            {
+                alarm_status_state = state_alarm_status_disable;
+            }
 
         // set_display_indicator_dot((millis() % 500) > 250);
     }
@@ -1518,9 +1519,9 @@ void kitchen_timer_state_refresh()
             buzzer.addNoteToNotesBuffer(G6_4);
             eeprom_write_byte_if_changed(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX, kitchen_timer_set_time_index);
         }
-        if (millis() > nextKitchenBlinkUpdateMillis)
+        if (millis() - nextKitchenBlinkUpdateMillis > TIME_HALF_BLINK_PERIOD_MILLIS)
         {
-            nextKitchenBlinkUpdateMillis = millis() + TIME_HALF_BLINK_PERIOD_MILLIS;
+            nextKitchenBlinkUpdateMillis = TIME_HALF_BLINK_PERIOD_MILLIS;
             kitchen_timer_state = state_stopped_refresh_display;
         }
 
@@ -1631,7 +1632,7 @@ void dark_mode_refresh()
         // press button, time is displayed
         hour_minutes_to_display();
         divider_colon_to_display(true); // have a static time indication.
-        
+
         if (alarm_status_state == state_alarm_status_is_enabled)
         {
             set_display_indicator_dot(true);
@@ -1642,13 +1643,12 @@ void dark_mode_refresh()
         }
 
         ledDisplay.setBrightness(get_brightness_index_to_uSeconds_delay(1), false);
-
     }
     else if (button_kitchen_timer.isUnpressedEdge() || button_alarm.isUnpressedEdge() || button_menu.isUnpressedEdge())
     {
         // release button, clock light off
         visualsManager.setBlankDisplay();
-        
+
         set_display_indicator_dot(false);
     }
 }
@@ -1720,9 +1720,9 @@ void checkHourlyBeep()
 
 void updateTimeNow()
 {
-    if (millis() > nextTimeUpdateMillis)
+    if (millis() - updateTimeDelayStartMillis > TIME_UPDATE_DELAY)
     {
-        nextTimeUpdateMillis = millis() + TIME_UPDATE_DELAY;
+        updateTimeDelayStartMillis = millis() ;
 
 // limit calls to peripheral by only loading time periodically
 #ifdef PROTOTYPE_GRAVITY_RTC
@@ -1939,7 +1939,7 @@ void setup()
         alarm_status_state = state_alarm_status_triggered;
     }
 
-    nextTimeUpdateMillis = millis();
+    updateTimeDelayStartMillis = millis();
     blinkUpdateDelayStartMillis = millis();
     nextKitchenBlinkUpdateMillis = millis();
     displayUpdateDelayStartMillis = millis();

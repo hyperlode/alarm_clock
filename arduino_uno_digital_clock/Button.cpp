@@ -66,7 +66,7 @@ void Button::refresh()
         is_debounced = false;
     }
 
-    if ((millis() > (debounce_start + DEBOUNCE_TIME)) && !is_debounced)
+    if ((millis() - debounce_start > DEBOUNCE_TIME) && !is_debounced)
     {
         setValue(val);
         is_debounced = true;
@@ -77,9 +77,10 @@ void Button::refresh()
 
     if (isPressed())
     {
-        if (millis() > (longPressStartMillis + BUTTON_LONG_PRESS_INITIAL_DELAY_MILLIS))
+        if (millis() - longPressStartMillis > BUTTON_LONG_PRESS_INITIAL_DELAY_MILLIS)
         {
-            bool delay_expired = millis() > (longPressStartMillis + BUTTON_LONG_PRESS_INITIAL_DELAY_MILLIS + longPressEdgeCount * BUTTON_LONG_PRESS_FAKE_EDGE_PERIOD_MILLIS);
+            bool delay_expired = millis() - longPressStartMillis > ( BUTTON_LONG_PRESS_INITIAL_DELAY_MILLIS + longPressEdgeCount * BUTTON_LONG_PRESS_FAKE_EDGE_PERIOD_MILLIS);
+
             if (delay_expired && !long_press_edge_detected)
             {
                 longPressEdgeCount++;
