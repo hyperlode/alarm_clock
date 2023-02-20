@@ -79,7 +79,7 @@ void Button::refresh()
     {
         if (millis() - longPressStartMillis > BUTTON_LONG_PRESS_INITIAL_DELAY_MILLIS)
         {
-            bool delay_expired = millis() - longPressStartMillis > ( BUTTON_LONG_PRESS_INITIAL_DELAY_MILLIS + longPressEdgeCount * BUTTON_LONG_PRESS_FAKE_EDGE_PERIOD_MILLIS);
+            bool delay_expired = millis() - longPressStartMillis > (BUTTON_LONG_PRESS_INITIAL_DELAY_MILLIS + longPressEdgeCount * BUTTON_LONG_PRESS_FAKE_EDGE_PERIOD_MILLIS);
 
             if (delay_expired && !long_press_edge_detected)
             {

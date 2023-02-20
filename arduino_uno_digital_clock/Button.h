@@ -9,18 +9,17 @@
 // pulled up. So, connect the push button to ground at NO(normal open).
 // use the binaryinput class methods to handle the button states.
 
-
 #define DEBOUNCE_TIME 50
 
 #define BUTTON_LONG_PRESS_INITIAL_DELAY_MILLIS 300
 #define BUTTON_LONG_PRESS_FAKE_EDGE_PERIOD_MILLIS 100
 
-
-class Button: public BinaryInput{
-//class Button{
-  public:
+class Button : public BinaryInput
+{
+    // class Button{
+public:
     Button();
-    void init(int pin); 
+    void init(int pin);
     void refresh();
     long getLastStateChangeMillis();
     bool isPressed();
@@ -32,17 +31,15 @@ class Button: public BinaryInput{
 
     long longPressStartMillis;
     int16_t longPressEdgeCount;
-    bool long_press_edge_detected=false;
+    bool long_press_edge_detected = false;
 
-  private:
+private:
     int pin;
     bool button_value_memory;
     bool button_longpress_edge_memory;
-//    bool val_debounced;
+    //    bool val_debounced;
     long debounce_start;
     bool is_debounced;
-  		
 };
-
 
 #endif

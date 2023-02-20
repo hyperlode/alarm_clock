@@ -260,7 +260,7 @@
 
 #define LAST_NOTE Gs8_1
 
-#define BUZZER_MINUTE_BEEP_FREQUENCY 4000 //beep at each minute with this frequency
+#define BUZZER_MINUTE_BEEP_FREQUENCY 4000 // beep at each minute with this frequency
 #define BUZZER_MINUTEBEEP_DURATION_MILLIS 20
 #define BUZZER_MINUTEBEEP_DURATION_MILLIS 20
 #define BUZZER_ALARM_FREQUENCY 2000

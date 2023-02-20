@@ -5,7 +5,7 @@
 
 Buzzer::Buzzer()
 {
-    //constructor
+    // constructor
     clearBuzzerNotesBuffer();
     this->tonePlayingStartMillis = 0;
     this->speedScale = 1;
@@ -17,7 +17,7 @@ void Buzzer::clearBuzzerNotesBuffer()
 {
     bufferPlayIndex = 1;
     bufferProgramIndex = 0;
-    this->tonePlayingStartMillis = millis(); //ready to right away detect new sounds from buffer
+    this->tonePlayingStartMillis = millis(); // ready to right away detect new sounds from buffer
 }
 
 void Buzzer::changeTranspose(int8_t delta)
@@ -54,24 +54,24 @@ uint8_t Buzzer::getPin()
 
 void Buzzer::addNoteToNotesBuffer(uint8_t note)
 {
-    //load one note to next slot in notesBuffer
+    // load one note to next slot in notesBuffer
 
-    //sound:
-    //0 = empty slot
+    // sound:
+    // 0 = empty slot
     //+ 1-62 = note (1 = 110Hz A , and going up 1/12 of an octave each number
     //+ 63, 126, 189, 252 = duration = 1/8, 1/4, 1/2, 1
-    //program in next available slot AFTER bufferPlayIndex
+    // program in next available slot AFTER bufferPlayIndex
 
-    //A0sharp 1/2 = 191
-    //1/8 stop = 63
+    // A0sharp 1/2 = 191
+    // 1/8 stop = 63
 
-    //this->bufferProgramIndex = getNextBuzzerNotesBufferSlot(true);
+    // this->bufferProgramIndex = getNextBuzzerNotesBufferSlot(true);
     this->bufferProgramIndex = getNextProgramIndex();
 
     this->buzzerNotesBuffer[this->bufferProgramIndex] = note;
 
-    //http://members.efn.org/~qehn/global/building/cents.htm
-    //F = {[(2)^1/12]^n} * 220 Hz //220Hz for A 440 , 880 .... for other octaves
+    // http://members.efn.org/~qehn/global/building/cents.htm
+    // F = {[(2)^1/12]^n} * 220 Hz //220Hz for A 440 , 880 .... for other octaves
 }
 
 uint8_t Buzzer::addRandomSoundToNotesBuffer(uint8_t lowest, uint8_t highest)
@@ -83,25 +83,25 @@ uint8_t Buzzer::addRandomSoundToNotesBuffer(uint8_t lowest, uint8_t highest)
 
 void Buzzer::checkAndPlayNotesBuffer()
 {
-    //play all the sounds in the notesBuffer (buffer)
-    //0 stands for free and programmable
-    //one bufferPlayIndex
-    //delay(100);
-    if (millis() - this->tonePlayingStartMillis > toneLength_playing)  //https://arduino.stackexchange.com/questions/12587/how-can-i-handle-the-millis-rollover
+    // play all the sounds in the notesBuffer (buffer)
+    // 0 stands for free and programmable
+    // one bufferPlayIndex
+    // delay(100);
+    if (millis() - this->tonePlayingStartMillis > toneLength_playing) // https://arduino.stackexchange.com/questions/12587/how-can-i-handle-the-millis-rollover
     {
         if (this->getNextProgramIndex() != this->bufferPlayIndex)
         {
             uint8_t current_note = this->buzzerNotesBuffer[this->bufferPlayIndex];
 
-            //F = {[(2)^1/12]^n} * 220 Hz //220Hz for A 440 , 880 .... for other octaves
+            // F = {[(2)^1/12]^n} * 220 Hz //220Hz for A 440 , 880 .... for other octaves
             float freq = 1;
 
             {
                 // convert note to freq
                 for (uint8_t i = 0; i < (current_note % NOTES_COUNT) + this->transpose; i++)
                 {
-                    //same result as: (but 2K less memory!!)
-                    //freq = pow(1.059463,(buzzerNotesBuffer[this->bufferPlayIndex])-1 % 63);
+                    // same result as: (but 2K less memory!!)
+                    // freq = pow(1.059463,(buzzerNotesBuffer[this->bufferPlayIndex])-1 % 63);
                     freq *= 1.059463;
                 }
             }
@@ -110,9 +110,9 @@ void Buzzer::checkAndPlayNotesBuffer()
 
             if (current_note <= LAST_NOTE)
             {
-                freq *= BUZZER_NOTES_BUFFER_BASE_FREQUENCY; //frequency
+                freq *= BUZZER_NOTES_BUFFER_BASE_FREQUENCY; // frequency
                 eight_notes_length_multiplier = (1 << (current_note / NOTES_COUNT));
-                tone(this->pin, (unsigned int)freq); //duration, number is exponent of 2.
+                tone(this->pin, (unsigned int)freq); // duration, number is exponent of 2.
                 noteFinishedEdge = true;
             }
             else
@@ -125,7 +125,7 @@ void Buzzer::checkAndPlayNotesBuffer()
 
             this->tonePlayingStartMillis = millis();
 
-            //move active slot
+            // move active slot
             this->bufferPlayIndex = this->getNextPlayIndex();
         }
         else
@@ -153,7 +153,7 @@ void Buzzer::setSpeedRatio(float speedMultiplier)
 
 uint8_t Buzzer::getNextProgramIndex()
 {
-    //returns value of next slot
+    // returns value of next slot
     uint8_t index = this->bufferProgramIndex;
     index++;
     if (index >= BUZZER_NOTES_BUFFER_LENGTH)
@@ -165,7 +165,7 @@ uint8_t Buzzer::getNextProgramIndex()
 
 uint8_t Buzzer::getNextPlayIndex()
 {
-    //returns value of next slot
+    // returns value of next slot
     uint8_t index = this->bufferPlayIndex;
     index++;
     if (index >= BUZZER_NOTES_BUFFER_LENGTH)
@@ -182,7 +182,7 @@ void Buzzer::buzzerSilent()
 
 void Buzzer::buzzerSilentClearBuffer()
 {
-    //erase contents of buzzerNotesBuffer and switch off.
+    // erase contents of buzzerNotesBuffer and switch off.
     this->buzzerSilent();
     this->clearBuzzerNotesBuffer();
 }
@@ -191,7 +191,7 @@ void Buzzer::playTone(unsigned int freq, unsigned long duration_millis)
 {
     // set 0 to duration_millis for indefinite length (will sound until notone or another tone command is given. )
 
-    //this->buzzerSilentClearBuffer();
+    // this->buzzerSilentClearBuffer();
     if (duration_millis == 0)
     {
         tone(this->pin, freq);

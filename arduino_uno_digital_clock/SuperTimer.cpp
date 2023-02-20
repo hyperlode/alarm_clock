@@ -7,11 +7,11 @@ SuperTimer::SuperTimer()
     this->initTimeMillis = 0;
 
 #ifdef ENABLE_CALLIBRATION
-    *this->callibrationConstant = 1.0; //default is 1 // DISABLED
+    *this->callibrationConstant = 1.0; // default is 1 // DISABLED
 #endif
 }
 
-//INIT TIME
+// INIT TIME
 
 void SuperTimer::incrementInitTimeMillis(int16_t deltaMillis)
 {
@@ -41,8 +41,8 @@ void SuperTimer::setInitTimeMillis(long milliSeconds)
 
 void SuperTimer::setOffsetInitTimeMillis(long offsetMillis)
 {
-    //make distinction between change during runtime and not, if during runtime: the original set time will not be affected.
-    //if offset is negative, time goes down. if positive, time goes up.
+    // make distinction between change during runtime and not, if during runtime: the original set time will not be affected.
+    // if offset is negative, time goes down. if positive, time goes up.
     if (getIsStarted())
     {
         // if (getIsPaused())
@@ -81,11 +81,11 @@ int SuperTimer::getInitTimeSecs()
     return timeMillisToSeconds(getInitTimeMillis());
 }
 
-//START BEHAVIOUR
+// START BEHAVIOUR
 
 void SuperTimer::start(long initTimeMillis)
 {
-    //positive initTimeMillis is chrono with offset..., negative is countdowntimer
+    // positive initTimeMillis is chrono with offset..., negative is countdowntimer
     this->initTimeMillis = initTimeMillis;
     start();
 }
@@ -112,13 +112,13 @@ void SuperTimer::startPaused(bool paused)
 
 void SuperTimer::startComplete(bool startInPauseMode, unsigned long startedMillisPassing)
 {
-    //boolean argument: if true, start in paused mode, is better than first start and then pause (no lag at all!)
-    //unsigned long: provided time for correcting the start value (if timer has to connect seamlessly to another event, include the millis() of the event (i.e. the ending of another timer)
+    // boolean argument: if true, start in paused mode, is better than first start and then pause (no lag at all!)
+    // unsigned long: provided time for correcting the start value (if timer has to connect seamlessly to another event, include the millis() of the event (i.e. the ending of another timer)
 
-    this->startedMillis = (long)startedMillisPassing - this->initTimeMillis; //if initTimeMillis is positive: chronooffset, if negative, countdowntimer (time will be negative until zero reached)
+    this->startedMillis = (long)startedMillisPassing - this->initTimeMillis; // if initTimeMillis is positive: chronooffset, if negative, countdowntimer (time will be negative until zero reached)
     setIsStarted(true);
 
-    //make sure if we start in pause mode, that the exact time of start is the start of the pause.
+    // make sure if we start in pause mode, that the exact time of start is the start of the pause.
     if (startInPauseMode)
     {
         setIsPaused(true);
@@ -136,17 +136,17 @@ void SuperTimer::startComplete(bool startInPauseMode, unsigned long startedMilli
 
 bool SuperTimer::getIsStarted()
 {
-    //return this->isStarted;
+    // return this->isStarted;
     return getBit(&this->boolContainer, BITLOCATION_ISSTARTED);
 }
 
 void SuperTimer::setIsStarted(bool isStarted)
 {
-    //this->isStarted = isStarted;
+    // this->isStarted = isStarted;
     setBit(&this->boolContainer, isStarted, BITLOCATION_ISSTARTED);
 }
 
-//PAUSE BEHAVIOUR
+// PAUSE BEHAVIOUR
 
 void SuperTimer::continu()
 {
@@ -163,7 +163,7 @@ void SuperTimer::paused(bool pause)
     if (pause)
     {
         if (!getIsPaused())
-        { //only do this when not yet paused!
+        { // only do this when not yet paused!
 #ifdef ENABLE_CALLIBRATION
             this->pauseStartedMillis = (long)getMillisCallibrated();
 #else
@@ -197,7 +197,7 @@ void SuperTimer::setIsPaused(bool paused)
     setBit(&this->boolContainer, paused, BITLOCATION_ISPAUSED);
 }
 
-//RESET
+// RESET
 
 void SuperTimer::reset()
 {
@@ -207,15 +207,15 @@ void SuperTimer::reset()
     setIsStarted(false);
 }
 
-//MODIFY
+// MODIFY
 
-//INQUIRY
+// INQUIRY
 
 long SuperTimer::getTimeMillis()
 {
-    //get the timertimer  (pauses will change startedMillis, so this time is without the pauses.)
-    //if negative, countdowntimer
-    //if positive, chrono
+    // get the timertimer  (pauses will change startedMillis, so this time is without the pauses.)
+    // if negative, countdowntimer
+    // if positive, chrono
 
     if (getIsStarted())
     {
@@ -269,8 +269,8 @@ unsigned int SuperTimer::getTimeSecondsAbsolute()
 
 unsigned int SuperTimer::getTimeSecondsCountDownTimer()
 {
-    //no negative time, if timer elapsed, then zero.
-    //will always return a positive number!
+    // no negative time, if timer elapsed, then zero.
+    // will always return a positive number!
     if (getTimeIsNegative())
     {
         return timeMillisToSeconds(getTimeMillis());
@@ -283,8 +283,8 @@ unsigned int SuperTimer::getTimeSecondsCountDownTimer()
 
 long SuperTimer::getTimeMillisCountDownTimer()
 {
-    //no negative time, if timer elapsed, then zero.
-    //will always return a positive number!
+    // no negative time, if timer elapsed, then zero.
+    // will always return a positive number!
 
     if (getTimeIsNegative())
     {
@@ -298,14 +298,14 @@ long SuperTimer::getTimeMillisCountDownTimer()
 
 void SuperTimer::getTimeString(char *textBuf)
 {
-    //will always return a string with a positive time value ...
+    // will always return a string with a positive time value ...
     timeMillisToClockString(textBuf, getTimeMillis());
 }
 
 bool SuperTimer::getSecondsBlinker()
 {
-    //ON when paused or at on time during blinking
-    //OFF at off time during blinking
+    // ON when paused or at on time during blinking
+    // OFF at off time during blinking
 
     if (getIsStarted())
     {
@@ -317,10 +317,10 @@ bool SuperTimer::getSecondsBlinker()
     }
 }
 
-//ADMINISTRATION
+// ADMINISTRATION
 #ifdef ENABLE_CALLIBRATION
 
-//callibration. should be done at a higher level. every clock should have the same speed.... , so the millis() function should be modified,
+// callibration. should be done at a higher level. every clock should have the same speed.... , so the millis() function should be modified,
 void SuperTimer::setCallibrationMillis(float *callibrationRatio)
 {
     // if higher than 1: clock goes faster, if lower than 1 clock goes slower
@@ -349,30 +349,30 @@ unsigned long SuperTimer::getMillisCallibrated()
 }
 #endif
 
-//original countdowntimer
+// original countdowntimer
 
 bool SuperTimer::getInFirstGivenHundredsPartOfSecond(int hundreds)
 {
-    //calc like this: if timeleft is 9600 millis ==> first 400 millis of seconds is passed...
-    // bool inFirstPartOfSecond = getTimeLeftMillis()%1000 <= 1000 - hundreds
+    // calc like this: if timeleft is 9600 millis ==> first 400 millis of seconds is passed...
+    //  bool inFirstPartOfSecond = getTimeLeftMillis()%1000 <= 1000 - hundreds
 
     if (getTimeMillis() >= 0)
     {
-        //chrono
+        // chrono
         return abs(getTimeMillis() % 1000) <= (hundreds);
     }
     else
     {
-        //countdown
+        // countdown
         return abs(getTimeMillis()) % 1000 >= (1000 - hundreds);
     }
 }
 
 bool SuperTimer::getEdgeSinceLastCallFirstGivenHundredsPartOfSecond(int hundreds, bool positiveEdge, bool negativeEdge)
 {
-    //check edge of first given hundreds since this function was last called
-    // if onlyPositiveEdge = false : edge on start and end (positive and negative edge) of first given part of hundreds
-    // if onlyPositiveEdge = true :  edge on start  (positive edge) of first given part of hundreds
+    // check edge of first given hundreds since this function was last called
+    //  if onlyPositiveEdge = false : edge on start and end (positive and negative edge) of first given part of hundreds
+    //  if onlyPositiveEdge = true :  edge on start  (positive edge) of first given part of hundreds
     bool inFirstGivenHundredsPartOfSecond = getInFirstGivenHundredsPartOfSecond(hundreds);
 
     // // if ( inFirstGivenHundredsPartOfSecond != getBit(&this->boolContainer,BITLOCATION_INFIRSTPARTOFSECOND_EGDE) && (!positiveEdge || inFirstGivenHundredsPartOfSecond  )){
@@ -386,7 +386,7 @@ bool SuperTimer::getEdgeSinceLastCallFirstGivenHundredsPartOfSecond(int hundreds
         (negativeEdge && !inFirstGivenHundredsPartOfSecond && getBit(&this->boolContainer, BITLOCATION_INFIRSTPARTOFSECOND_EGDE)))
     {
 
-        //previousCheckInFirstPartOfSecond = inFirstGivenHundredsPartOfSecond;
+        // previousCheckInFirstPartOfSecond = inFirstGivenHundredsPartOfSecond;
         setBit(&this->boolContainer, inFirstGivenHundredsPartOfSecond, BITLOCATION_INFIRSTPARTOFSECOND_EGDE);
         return true;
     }

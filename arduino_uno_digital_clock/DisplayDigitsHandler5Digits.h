@@ -1,4 +1,4 @@
-//Written by Lode Ameije 2013
+// Written by Lode Ameije 2013
 #ifndef DisplayDigitsHandler_h
 #define DisplayDigitsHandler_h
 
@@ -8,9 +8,9 @@
 // #include "WProgram.h"
 // #endif
 
-//#include "SevSeg5Digits.h"
-//#include "Countdowntimer.h"
-//#include "SuperTimer.h"
+// #include "SevSeg5Digits.h"
+// #include "Countdowntimer.h"
+// #include "SuperTimer.h"
 #include "Utilitieslode.h"
 
 // #define ENABLE_SCROLL
@@ -44,13 +44,13 @@ const byte selected_ascii_to_7seg_digit[] PROGMEM = {
     B00000111,                   //'7'
     B01111111,                   //'8'
     B01101111,                   //'9'
-    ONLY_TOP_SEGMENT,            //non ascii
-    ONLY_MIDDLE_SEGMENT,         //non ascii
-    ONLY_BOTTOM_SEGMENT,         //non ascii
-    ONLY_TOP_AND_BOTTOM_SEGMENT, //non ascii
-    NO_SEGMENTS,                 //non ascii
-    B00000000,                   //non ascii
-    B00000000,                   //non ascii
+    ONLY_TOP_SEGMENT,            // non ascii
+    ONLY_MIDDLE_SEGMENT,         // non ascii
+    ONLY_BOTTOM_SEGMENT,         // non ascii
+    ONLY_TOP_AND_BOTTOM_SEGMENT, // non ascii
+    NO_SEGMENTS,                 // non ascii
+    B00000000,                   // non ascii
+    B00000000,                   // non ascii
     B01110111,                   //'A'
     B01111100,                   //'B'
     B00111001,                   //'C'
@@ -131,10 +131,10 @@ const byte standard_text[] PROGMEM = {
     'L', 'O', 'A', 'D',
     'A', 'U', 'T', 'O',
     'S', 'E', 'T', SPACE_FAKE_ASCII,
-    'H', 'E', 'A', 'D',                           //don't change position, indeces calculated, used in random
-    'T', 'A', 'I', 'L',                           //don't change position, indeces calculated, used in random
-    SPACE_FAKE_ASCII, 'N', 'O', SPACE_FAKE_ASCII, //don't change position, indeces calculated, used in random
-    SPACE_FAKE_ASCII, 'Y', 'E', 'S',              //don't change position, indeces calculated, used in random
+    'H', 'E', 'A', 'D',                           // don't change position, indeces calculated, used in random
+    'T', 'A', 'I', 'L',                           // don't change position, indeces calculated, used in random
+    SPACE_FAKE_ASCII, 'N', 'O', SPACE_FAKE_ASCII, // don't change position, indeces calculated, used in random
+    SPACE_FAKE_ASCII, 'Y', 'E', 'S',              // don't change position, indeces calculated, used in random
     'A', 'J', 'O', 'R',
     'I', 'N', 'O', 'R',
     'P', 'E', 'N', 'T',
@@ -170,9 +170,9 @@ public:
     void setCharToDisplay(char character, uint8_t digit);
     char *getDisplayTextBufHandle();
 
-    void setNumberToDisplayAsDecimal(int16_t number);               //updateDisplayNumber
-    void setNumberToDisplay(int16_t number, boolean asHexadecimal); //updateDisplayNumber
-    void setBoolToDisplay(bool value); //updateDisplayNumber
+    void setNumberToDisplayAsDecimal(int16_t number);               // updateDisplayNumber
+    void setNumberToDisplay(int16_t number, boolean asHexadecimal); // updateDisplayNumber
+    void setBoolToDisplay(bool value);                              // updateDisplayNumber
 
     void setBinaryToDisplay(uint32_t value); //  updateDisplayAllBits
 
@@ -184,7 +184,7 @@ public:
     byte *getLedArrayHandle();
     void minutesToMinutesHoursString(char *textBuf, uint16_t minutes);
     // void progmemToDisplayBuffer(uint32_t* displayBuffer, const uint8_t* progmemAddress);
-    void setBlankDisplay(); //eraseAll
+    void setBlankDisplay(); // eraseAll
 
     void refresh();
 
@@ -195,14 +195,14 @@ public:
 
     void convert_text4Bytes_to_32bits(char *text, uint32_t *binary);
 
-    //void convert_4bytesArray_32bits(char* characters, uint32_t* displayAllSegments, boolean toArray);
+    // void convert_4bytesArray_32bits(char* characters, uint32_t* displayAllSegments, boolean toArray);
 
     void charsToSevenSegment(char *text, byte *digits);
     void charToSevenSegment(char character, byte *digit);
 
     void setMultiplexerBuffer(byte *multiplexerDigits);
 
-    //void displaySetTextAndDecimalPoints(char *inText, uint8_t *decimalPoints);  //deprecated
+    // void displaySetTextAndDecimalPoints(char *inText, uint8_t *decimalPoints);  //deprecated
 
     // void setBrightness(byte value, bool exponential); // should not be done here!
 
@@ -217,19 +217,19 @@ public:
     void doSequence();
     void doScroll();
 
-    //check scroll status
+    // check scroll status
     bool getIsScrolling();
 
-    //set scrollstatus
+    // set scrollstatus
     void setIsScrolling(bool enableScroll);
     void setScrollSpeed(long value);
 #endif
 
 private:
-    //SevSeg5Digits sevseg;
-    // byte brightness;
+    // SevSeg5Digits sevseg;
+    //  byte brightness;
 
-    //update
+    // update
     char text[4];
     byte lights;
     byte decimalPoints;
@@ -237,10 +237,10 @@ private:
 
     byte *multiplexerData; // pointer to array containing the actual lights data.
 
-    //byte *activeSegment;
+    // byte *activeSegment;
 
 #ifdef ENABLE_SCROLL
-    int textStartPos; //can be negative
+    int textStartPos; // can be negative
     bool comeScrollIn;
     bool scrollOnceElseInfinit;
     bool isScrolling;

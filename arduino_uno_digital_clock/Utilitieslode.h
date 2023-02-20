@@ -1,11 +1,11 @@
-//Written by Lode Ameije 2013
+// Written by Lode Ameije 2013
 #ifndef Utilitieslode_h
 #define Utilitieslode_h
-//#if defined(ARDUINO) && ARDUINO >= 100
+// #if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"
-//#else
-//#include "WProgram.h"
-//#endif
+// #else
+// #include "WProgram.h"
+// #endif
 
 void timeSecondsToClockString(char *textBuf, unsigned int seconds);
 

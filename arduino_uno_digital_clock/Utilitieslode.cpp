@@ -3,20 +3,20 @@
 
 void timeSecondsToClockString(char *textBuf, unsigned int seconds)
 {
-    //clockToString(textBuf, seconds/60, seconds % 60);
+    // clockToString(textBuf, seconds/60, seconds % 60);
     if (seconds <= 3599)
-    { //3599  for one hour 5999 for 90 minutes
+    { // 3599  for one hour 5999 for 90 minutes
         intToDigitsString(textBuf, (seconds / 60) * 100 + seconds % 60, true);
     }
     else if (seconds <= 35999)
-    { //9h59 (and 59 seconds)
+    { // 9h59 (and 59 seconds)
 
         intToDigitsString(textBuf, (seconds / 3600) * 1000 + seconds % 3600 / 60, true);
         textBuf[1] = 'H';
     }
     else
     {                                                                                        //>35999   ==> max uuHm  bvb. 99u9
-        intToDigitsString(textBuf, (seconds / 3600) * 100 + seconds % 3600 / 60 / 10, true); //39600-> 1100   40200 -> 1101 -> 11H1 (1 is ten minutes)
+        intToDigitsString(textBuf, (seconds / 3600) * 100 + seconds % 3600 / 60 / 10, true); // 39600-> 1100   40200 -> 1101 -> 11H1 (1 is ten minutes)
         textBuf[2] = 'H';
     }
 }
@@ -68,9 +68,9 @@ void timeMillisToClockString(char *textBuf, long milliSeconds)
 
 void intToDigitsString(char *textBuf, unsigned int number, bool trailingZeros)
 {
-    //for four digits
+    // for four digits
 
-    //number of digits
+    // number of digits
     unsigned int counter = number;
     int numberOfDigits = 0;
 
@@ -85,13 +85,13 @@ void intToDigitsString(char *textBuf, unsigned int number, bool trailingZeros)
         counter = counter / 10;
     }
 
-    //ASCII space = 32,  '0' =48
+    // ASCII space = 32,  '0' =48
     int asciiOffsetForZero = 0;
     if (trailingZeros)
     {
         asciiOffsetForZero = 16;
     }
-    //set trailing values to char array
+    // set trailing values to char array
     for (int i = 0; i < 4; i++)
     {
         textBuf[i] = 32 + asciiOffsetForZero;
@@ -109,18 +109,18 @@ void intToDigitsString(char *textBuf, unsigned int number, bool trailingZeros)
 
 uint8_t doBoolArrayToByte(bool bools[])
 {
-    //combines boolean values in 8 bits in a byte.   (sequence in byte: boolean 7 bit 7 -------- boolean0 bit 0)
+    // combines boolean values in 8 bits in a byte.   (sequence in byte: boolean 7 bit 7 -------- boolean0 bit 0)
     uint8_t combiner = 0;
     for (int i = 0; i < 8; i++)
     {
-        combiner |= (bools[i] == true) << i; //comparision returns one or zero, and we shift that bit i places to the left.
+        combiner |= (bools[i] == true) << i; // comparision returns one or zero, and we shift that bit i places to the left.
     }
     return combiner;
 }
 
 void doByteToBoolArray(uint8_t combinationByte, bool **boolArray)
 {
-    //write to pointer array of bools
+    // write to pointer array of bools
 
     for (byte i = 0; i < 8; i++)
     {
@@ -130,8 +130,8 @@ void doByteToBoolArray(uint8_t combinationByte, bool **boolArray)
 
 void setBit(uint8_t *bitContainer, bool value, byte index)
 {
-    //http://stackoverflow.com/questions/5612174/more-ram-efficient-boolean-array-arduino-environment
-    // http://stackoverflow.com/questions/47981/how-do-you-set-clear-and-toggle-a-single-bit-in-c-c
+    // http://stackoverflow.com/questions/5612174/more-ram-efficient-boolean-array-arduino-environment
+    //  http://stackoverflow.com/questions/47981/how-do-you-set-clear-and-toggle-a-single-bit-in-c-c
     //*bitContainer = *bitContainer | (1 << index);
     *bitContainer ^= (-value ^ *bitContainer) & (1 << index);
 
@@ -147,12 +147,11 @@ void setBit(uint8_t *bitContainer, bool value, byte index)
 
 bool getBit(uint8_t *bitContainer, byte index)
 {
-    //http://stackoverflow.com/questions/5612174/more-ram-efficient-boolean-array-arduino-
-    // http://stackoverflow.com/questions/47981/how-do-you-set-clear-and-toggle-a-single-bit-in-c-c
-    // return *bitContainer & (1 << index);
+    // http://stackoverflow.com/questions/5612174/more-ram-efficient-boolean-array-arduino-
+    //  http://stackoverflow.com/questions/47981/how-do-you-set-clear-and-toggle-a-single-bit-in-c-c
+    //  return *bitContainer & (1 << index);
     return (*bitContainer >> index) & 1;
 }
-
 
 bool stepChange(int8_t *counter, int8_t increment, int8_t minValue, int8_t maxValue, bool wrapAround)
 {
@@ -165,7 +164,6 @@ void nextStep(int8_t *counter, bool countUpElseDown, int8_t minValue, int8_t max
 {
     int8_t increment = -1 + (2 * countUpElseDown);
     stepChange(counter, increment, minValue, maxValue, wrapAround);
-    
 }
 
 void nextStepRotate(int8_t *counter, bool countUpElseDown, int8_t minValue, int8_t maxValue)

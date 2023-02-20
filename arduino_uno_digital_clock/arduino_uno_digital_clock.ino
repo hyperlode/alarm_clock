@@ -1355,10 +1355,10 @@ void alarm_status_refresh()
             alarm_status_state = state_alarm_status_triggered;
         }
         if (button_alarm.isPressed() &&
-            millis() - button_alarm.getLastStateChangeMillis() > ALARM_USER_STOP_BUTTON_PRESS_MILLIS))
-            {
-                alarm_status_state = state_alarm_status_disable;
-            }
+            (millis() - button_alarm.getLastStateChangeMillis() > ALARM_USER_STOP_BUTTON_PRESS_MILLIS))
+        {
+            alarm_status_state = state_alarm_status_disable;
+        }
 
         // set_display_indicator_dot((millis() % 500) > 250);
     }
@@ -1722,7 +1722,7 @@ void updateTimeNow()
 {
     if (millis() - updateTimeDelayStartMillis > TIME_UPDATE_DELAY)
     {
-        updateTimeDelayStartMillis = millis() ;
+        updateTimeDelayStartMillis = millis();
 
 // limit calls to peripheral by only loading time periodically
 #ifdef PROTOTYPE_GRAVITY_RTC

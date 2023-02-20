@@ -405,8 +405,8 @@ void LedMultiplexer5x8::refresh()
 {
     // const byte activeSegmentsCountToDelayUSeconds[8] = {1,1,1,1,1,1,1,1}; // number of on cycles. lower is less bright// not every segment has a diode. If less segments are lit up, the segments are brighter. This needs to be countered.
     // const byte activeSegmentsCountToDelayUSeconds[8] = {10, 10, 1, 3, 3, 20, 10, 10}; // number of on cycles. lower is less bright// not every segment has a diode. If less segments are lit up, the segments are brighter. This needs to be countered.
-    const uint16_t activeSegmentsCountToDelayUSeconds[9] = {500, 20, 200, 300, 400, 500, 500, 500,500}; // 9 states: 0 = all off. index 8 -> all eigth on // number of on cycles. lower is less bright// not every segment has a diode. If less segments are lit up, the segments are brighter. This needs to be countered.
-    
+    const uint16_t activeSegmentsCountToDelayUSeconds[9] = {500, 20, 200, 300, 400, 500, 500, 500, 500}; // 9 states: 0 = all off. index 8 -> all eigth on // number of on cycles. lower is less bright// not every segment has a diode. If less segments are lit up, the segments are brighter. This needs to be countered.
+
     switch (stateMultiplexer)
     {
 
