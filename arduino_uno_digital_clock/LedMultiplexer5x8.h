@@ -58,7 +58,8 @@ private:
 
     enum class StateMultiplexer { state_digit_on, state_all_off, state_setup_digit };
     StateMultiplexer stateMultiplexer = StateMultiplexer::state_all_off;
-    uint16_t ticker = 0;
+    // uint16_t ticker = 0;
+    long timestampMicros;
 
 
 

@@ -280,7 +280,7 @@ enum Main_state : uint8_t
 {
     state_display_time = 0,
     state_menu,
-    state_night_mode,
+    state_dark_mode,
     state_alarm_set,
     state_kitchen_timer,
     state_main_menu
@@ -380,17 +380,22 @@ void set_blink_offset()
     blink_offset = millis() % 1000;
 }
 
-void cycleBrightness(bool init)
+uint16_t get_brightness_index_to_uSeconds_delay(uint8_t index)
 {
-
-    //#define CYCLING_GOES_BRIGHTER
-
 #if (BRIGHTNESS_LEVELS == 4)
     uint8_t brightness_settings[] = {0, 1, 10, 80, 254}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
 #elif (BRIGHTNESS_LEVELS == 3)
-    // uint16_t brightness_settings[] = {100, 300, 100, 0}; 
-    uint16_t brightness_settings[] = {100, 300, 100, 0}; // 0 is brighter 
+    // uint16_t brightness_settings[] = {100, 300, 100, 0};
+    uint16_t brightness_settings[] = {100, 18000, 4000, 0}; // useconds all off time (between lit up leds)
+
 #endif
+    return brightness_settings[index];
+}
+
+void cycleBrightness(bool init)
+{
+
+    // #define CYCLING_GOES_BRIGHTER
 
 #ifdef CYCLING_GOES_BRIGHTER
     // if cycling goes brighter
@@ -421,11 +426,14 @@ void cycleBrightness(bool init)
     {
         visualsManager.setBlankDisplay();
         // Serial.println("dark mode enter.");
-        main_state = state_night_mode;
+        main_state = state_dark_mode;
         brightness_index = BRIGHTNESS_LEVELS;
     }
-    ledDisplay.setBrightness(brightness_settings[brightness_index], false);
-    Serial.println(brightness_settings[brightness_index]);
+    ledDisplay.setBrightness(get_brightness_index_to_uSeconds_delay(brightness_index), false);
+#ifdef ENABLE_SERIAL
+    Serial.println(get_brightness_index_to_uSeconds_delay(brightness_index));
+
+#endif
 }
 
 void display_alarm()
@@ -474,7 +482,10 @@ void refresh_indicator_dot()
         set_display_indicator_dot(true);
     }
 
-    else if (main_state == state_display_time)
+    else if (main_state == state_dark_mode ){
+        // do not set here. 
+    }
+    else if (main_state == state_display_time )
     {
 
         if (kitchenTimer.getIsStarted())
@@ -530,12 +541,13 @@ void refresh_indicator_dot()
 }
 
 void set_display_indicator_dot(bool active)
+// void set_display_indicator_dot(bool active, bool force_it=false)
 {
     // only update display if "different"
-    if (active != display_dot_status_memory)
-    {
+    // if (active != display_dot_status_memory)
+    // {
         visualsManager.setDecimalPointToDisplay(active, 0);
-    }
+    // }
     display_dot_status_memory = active;
 }
 
@@ -755,14 +767,15 @@ void main_menu_state_refresh()
         }
         if (button_up.isPressedEdge() || button_down.isPressedEdge())
         {
-            //Serial.println(main_menu_item_index);
-            // one cycle through menu and back to main menu.
-            if (main_menu_item_index == MENU_MENU_ITEMS_COUNT - 1 && button_up.isPressed()){
+            // Serial.println(main_menu_item_index);
+            //  one cycle through menu and back to main menu.
+            if (main_menu_item_index == MENU_MENU_ITEMS_COUNT - 1 && button_up.isPressed())
+            {
                 main_menu_state = state_main_menu_exit;
             }
-            
+
             nextStepRotate(&main_menu_item_index, button_up.isPressed(), 0, MENU_MENU_ITEMS_COUNT - 1);
-           
+
             main_menu_display_update = true;
             set_blink_offset();
         }
@@ -865,19 +878,21 @@ void main_menu_state_refresh()
             if (button_enter.isPressedEdge())
             {
                 time_set_index_helper++;
-                if (time_set_index_helper == 3){
+                if (time_set_index_helper == 3)
+                {
                     main_menu_state = state_main_menu_save_and_back_to_menu;
                 }
-                //nextStepRotate(&time_set_index_helper, true, 0, 2);
+                // nextStepRotate(&time_set_index_helper, true, 0, 2);
             };
         }
         break;
         case (MAIN_MENU_ITEM_TUNE):
         {
-            if (button_enter.isPressedEdge()){
-                main_menu_state = state_main_menu_save_and_back_to_menu ;
+            if (button_enter.isPressedEdge())
+            {
+                main_menu_state = state_main_menu_save_and_back_to_menu;
             }
-            if (button_up.isPressedEdge() || button_down.isPressedEdge() )
+            if (button_up.isPressedEdge() || button_down.isPressedEdge())
             {
                 nextStepRotate(&alarm_tune_index, button_up.isPressed() || button_enter.isPressed(), 0, TUNES_COUNT - 1);
 
@@ -893,7 +908,8 @@ void main_menu_state_refresh()
         break;
         case (MAIN_MENU_ITEM_SNOOZE_TIME):
         {
-            if (button_enter.isPressedEdge()){
+            if (button_enter.isPressedEdge())
+            {
                 main_menu_state = state_main_menu_save_and_back_to_menu;
             }
             visualsManager.setNumberToDisplay(alarm_snooze_duration_minutes, false);
@@ -906,7 +922,8 @@ void main_menu_state_refresh()
         case (MAIN_MENU_ITEM_ENABLE_HOURLY_BEEP):
         {
             visualsManager.setBoolToDisplay(hourly_beep_enabled);
-            if (button_enter.isPressedEdge()){
+            if (button_enter.isPressedEdge())
+            {
                 main_menu_state = state_main_menu_save_and_back_to_menu;
             }
             if (button_up.isPressedEdge() || button_down.isPressedEdge())
@@ -918,11 +935,12 @@ void main_menu_state_refresh()
         break;
         case (MAIN_MENU_ITEM_ENABLE_SNOOZE_TIME_DECREASE):
         {
-            if (button_enter.isPressedEdge()){
+            if (button_enter.isPressedEdge())
+            {
                 main_menu_state = state_main_menu_save_and_back_to_menu;
             }
             visualsManager.setBoolToDisplay(enable_snooze_time_decrease);
-            if (button_up.isPressedEdge() || button_down.isPressedEdge() )
+            if (button_up.isPressedEdge() || button_down.isPressedEdge())
             {
                 enable_snooze_time_decrease = !enable_snooze_time_decrease;
             }
@@ -1242,7 +1260,7 @@ void alarm_status_refresh()
                 }
             }
             break;
-            case state_night_mode:
+            case state_dark_mode:
             {
                 alarm_status_state = state_alarm_status_triggered;
             }
@@ -1611,12 +1629,39 @@ void dark_mode_refresh()
     {
         // press button, time is displayed
         hour_minutes_to_display();
-        divider_colon_to_display(true); // have a static time indidation.
+        divider_colon_to_display(true); // have a static time indication.
+        
+        if (alarm_status_state == state_alarm_status_is_enabled)
+        {
+            set_display_indicator_dot(true);
+        }
+        else
+        {
+            set_display_indicator_dot(false);
+        }
+        // display_time_state_refresh();
+
+        //ledDisplay.setBrightness(get_brightness_index_to_uSeconds_delay(2), false);
+
+
+        // nextDisplayTimeUpdateMillis = millis() + TIME_UPDATE_DELAY;
+
+        // hour_minutes_to_display();
+    
+
+    // if (button_alarm.isPressedEdge())
+    // {
+    //     main_state = state_alarm_set;
+    // }
+
+
     }
     else if (button_kitchen_timer.isUnpressedEdge() || button_alarm.isUnpressedEdge() || button_menu.isUnpressedEdge())
     {
         // release button, clock light off
         visualsManager.setBlankDisplay();
+        ledDisplay.setBrightness(get_brightness_index_to_uSeconds_delay(0), false);
+        set_display_indicator_dot(false);
     }
 }
 
@@ -1635,7 +1680,7 @@ void refresh_main_state()
         main_menu_state_refresh();
     }
     break;
-    case state_night_mode:
+    case state_dark_mode:
     {
         // todo rework. this is not a good way. Dark mode should just skip visuals update, and if a button pressed, allow visual update until depressed.
         dark_mode_refresh();
@@ -1742,26 +1787,36 @@ void main_application_loop()
 {
 
     // input
+    ledDisplay.refresh();
     button_0.refresh();
+    ledDisplay.refresh();
     button_1.refresh();
     ledDisplay.refresh();
     button_2.refresh();
-    button_3.refresh();
-    
     ledDisplay.refresh();
-    
+    button_3.refresh();
+
+    ledDisplay.refresh();
+
     // process
     updateTimeNow();
+    ledDisplay.refresh();
     checkWatchDog();
+    ledDisplay.refresh();
     checkHourlyBeep();
+    ledDisplay.refresh();
     refresh_main_state();
     ledDisplay.refresh();
     refresh_indicator_dot();
+    ledDisplay.refresh();
     alarm_status_refresh(); // needs to go after main state loop (to check for button press at time of alarm triggered not doing normal alarm function)
+    ledDisplay.refresh();
     alarm_kitchen_timer_refresh();
+    ledDisplay.refresh();
 
     // output
     buzzer.checkAndPlayNotesBuffer();
+    ledDisplay.refresh();
     visualsManager.refresh();
     ledDisplay.refresh();
     // delay(DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS);
