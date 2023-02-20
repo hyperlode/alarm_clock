@@ -761,7 +761,7 @@ void main_menu_state_refresh()
             main_menu_state = state_main_menu_modify_item;
             time_set_index_helper = 0;
         }
-        if (button_exit.isPressedEdge() || (millis() > watchdog_last_button_press_millis + MAIN_MENU_DISPLAY_ITEMS_AUTO_ESCAPE_MILLIS))
+        if (button_exit.isPressedEdge() || (millis() -  watchdog_last_button_press_millis > MAIN_MENU_DISPLAY_ITEMS_AUTO_ESCAPE_MILLIS))
         {
             main_menu_state = state_main_menu_exit;
         }
@@ -847,7 +847,7 @@ void main_menu_state_refresh()
     break;
     case (state_main_menu_modify_item):
     {
-        if (button_exit.isPressedEdge() || (millis() > watchdog_last_button_press_millis + MAIN_MENU_MODIFY_ITEMS_AUTO_ESCAPE_MILLIS))
+        if (button_exit.isPressedEdge() || (millis() - watchdog_last_button_press_millis > MAIN_MENU_MODIFY_ITEMS_AUTO_ESCAPE_MILLIS))
         {
             main_menu_state = state_main_menu_save_and_back_to_menu;
         }
@@ -1021,7 +1021,7 @@ void set_time_state_refresh()
 void alarm_set_state_refresh()
 {
 
-    if (millis() > watchdog_last_button_press_millis + DELAY_ALARM_AUTO_ESCAPE_MILLIS)
+    if (millis() - watchdog_last_button_press_millis > DELAY_ALARM_AUTO_ESCAPE_MILLIS)
     {
         alarm_set_state = state_alarm_end;
     }
@@ -1466,7 +1466,7 @@ void kitchen_timer_state_refresh()
     // }
     // state_mem_tmp = kitchen_timer_state;
 
-    if (millis() > watchdog_last_button_press_millis + DELAY_KITCHEN_TIMER_AUTO_ESCAPE_MILLIS)
+    if (millis() - watchdog_last_button_press_millis > DELAY_KITCHEN_TIMER_AUTO_ESCAPE_MILLIS)
     {
 
         if (kitchen_timer_state == state_stopped)
