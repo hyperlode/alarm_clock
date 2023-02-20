@@ -425,6 +425,7 @@ void cycleBrightness(bool init)
     if (brightness_index == 0)
     {
         visualsManager.setBlankDisplay();
+        set_display_indicator_dot(false);
         // Serial.println("dark mode enter.");
         main_state = state_dark_mode;
         brightness_index = BRIGHTNESS_LEVELS;
@@ -541,13 +542,12 @@ void refresh_indicator_dot()
 }
 
 void set_display_indicator_dot(bool active)
-// void set_display_indicator_dot(bool active, bool force_it=false)
 {
     // only update display if "different"
-    // if (active != display_dot_status_memory)
-    // {
+    if (active != display_dot_status_memory)
+    {
         visualsManager.setDecimalPointToDisplay(active, 0);
-    // }
+    }
     display_dot_status_memory = active;
 }
 
@@ -1623,6 +1623,7 @@ void dark_mode_refresh()
 
     if (button_brightness.isPressedEdge())
     {
+        ledDisplay.setBrightness(get_brightness_index_to_uSeconds_delay(0), false);
         main_state = state_display_time;
     }
     else if (button_kitchen_timer.isPressedEdge() || button_alarm.isPressedEdge() || button_menu.isPressedEdge())
@@ -1639,28 +1640,15 @@ void dark_mode_refresh()
         {
             set_display_indicator_dot(false);
         }
-        // display_time_state_refresh();
 
-        //ledDisplay.setBrightness(get_brightness_index_to_uSeconds_delay(2), false);
-
-
-        // nextDisplayTimeUpdateMillis = millis() + TIME_UPDATE_DELAY;
-
-        // hour_minutes_to_display();
-    
-
-    // if (button_alarm.isPressedEdge())
-    // {
-    //     main_state = state_alarm_set;
-    // }
-
+        ledDisplay.setBrightness(get_brightness_index_to_uSeconds_delay(1), false);
 
     }
     else if (button_kitchen_timer.isUnpressedEdge() || button_alarm.isUnpressedEdge() || button_menu.isUnpressedEdge())
     {
         // release button, clock light off
         visualsManager.setBlankDisplay();
-        ledDisplay.setBrightness(get_brightness_index_to_uSeconds_delay(0), false);
+        
         set_display_indicator_dot(false);
     }
 }
