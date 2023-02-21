@@ -47,10 +47,15 @@ void Button::setLongPressCount(uint16_t fakeLongPressCountPeriods)
 
 bool Button::getLongPressPeriodicalEdge()
 {
+
+
     //   bool edge_detected;
     //   edge_detected = long_press_edge_detected;
     //   long_press_edge_detected = false;
     //   return edge_detected;
+    // bool tmp = long_press_edge_detected;
+    // long_press_edge_detected =false;
+    // return tmp;
     return long_press_edge_detected;
 }
 
@@ -70,29 +75,65 @@ void Button::refresh()
     {
         setValue(val);
         is_debounced = true;
+        // #ifdef ENABLE_SERIAL
+                Serial.println("bb");
+// #endif
 
         longPressStartMillis = millis();
+        longPressPeriodicalStartMillis = millis();
         longPressEdgeCount = 0;
     }
 
     if (isPressed())
     {
+        // if (millis() - longPressStartMillis > BUTTON_LONG_PRESS_INITIAL_DELAY_MILLIS)
+        // {
+        //     bool delay_expired = millis() - longPressStartMillis > (BUTTON_LONG_PRESS_INITIAL_DELAY_MILLIS + longPressEdgeCount * BUTTON_LONG_PRESS_FAKE_EDGE_PERIOD_MILLIS);
+
+        //     if (delay_expired && !long_press_edge_detected)
+        //     {
+        //         longPressEdgeCount++;
+        //         // Serial.println("long p[ress edge");
+        //         // Serial.println(longPressEdgeCount);
+        //         long_press_edge_detected = true;
+        //     }
+        //     else
+        //     {
+        //         long_press_edge_detected = false;
+        //     }
+        //     // button_longpress_edge_memory = delay_expired;
+        // }
+
         if (millis() - longPressStartMillis > BUTTON_LONG_PRESS_INITIAL_DELAY_MILLIS)
         {
-            bool delay_expired = millis() - longPressStartMillis > (BUTTON_LONG_PRESS_INITIAL_DELAY_MILLIS + longPressEdgeCount * BUTTON_LONG_PRESS_FAKE_EDGE_PERIOD_MILLIS);
 
-            if (delay_expired && !long_press_edge_detected)
+            if (millis() - longPressPeriodicalStartMillis > BUTTON_LONG_PRESS_FAKE_EDGE_PERIOD_MILLIS)
             {
-                longPressEdgeCount++;
-                // Serial.println("long p[ress edge");
-                // Serial.println(longPressEdgeCount);
                 long_press_edge_detected = true;
+                longPressEdgeCount++;
+                longPressPeriodicalStartMillis = millis();
+// #ifdef ENABLE_SERIAL
+                Serial.println("LOONG");
+// #endif
             }
             else
             {
                 long_press_edge_detected = false;
             }
-            // button_longpress_edge_memory = delay_expired;
+            // bool delay_expired = millis() - longPressStartMillis > (BUTTON_LONG_PRESS_INITIAL_DELAY_MILLIS + longPressEdgeCount * BUTTON_LONG_PRESS_FAKE_EDGE_PERIOD_MILLIS);
+
+            // if (delay_expired && !long_press_edge_detected)
+            // {
+            //     longPressEdgeCount++;
+            //     // Serial.println("long p[ress edge");
+            //     // Serial.println(longPressEdgeCount);
+            //     long_press_edge_detected = true;
+            // }
+            // else
+            // {
+            //     long_press_edge_detected = false;
+            // }
+            // // button_longpress_edge_memory = delay_expired;
         }
     }
 

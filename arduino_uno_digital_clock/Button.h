@@ -29,7 +29,8 @@ public:
     int16_t getLongPressCount();
     void setLongPressCount(uint16_t fakeLongPressCountPeriods);
 
-    long longPressStartMillis;
+    unsigned long longPressStartMillis;
+    unsigned long longPressPeriodicalStartMillis;
     int16_t longPressEdgeCount;
     bool long_press_edge_detected = false;
 

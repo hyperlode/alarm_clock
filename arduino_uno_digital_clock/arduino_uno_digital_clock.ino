@@ -1,8 +1,9 @@
 
-// #define ENABLE_SERIAL
+#define ENABLE_SERIAL
 // #define ENABLE_MEASURE_CYCLE_TIME
 // #define PROTOTYPE_BIG_BOX
 // #define PROTOTYPE_GRAVITY_RTC
+// #define MINIMAL_RTC_INTERACTION
 
 #ifdef PROTOTYPE_GRAVITY_RTC
 #include "GravityRtc.h"
@@ -105,6 +106,7 @@
 #define button_alarm button_0
 
 #define TIME_UPDATE_DELAY 1000
+#define DISPLAY_TIME_UPDATE_DELAY 1000
 #define DOT_UPDATE_DELAY 250
 #define TIME_HALF_BLINK_PERIOD_MILLIS 250
 #define DELAY_ALARM_AUTO_ESCAPE_MILLIS 5000
@@ -136,7 +138,7 @@ bool beep_memory;
 
 long alarm_started_millis;
 
-long updateTimeDelayStartMillis;
+unsigned long updateTimeDelayStartMillis;
 long blinkUpdateDelayStartMillis;
 long nextKitchenBlinkUpdateMillis;
 long displayUpdateDelayStartMillis;
@@ -171,6 +173,9 @@ int8_t time_set_index_helper;
 uint8_t hour_now;
 uint8_t minute_now;
 uint8_t second_now;
+bool amElsePm_now;
+unsigned long time_as_millis;
+unsigned long rtc_chip_time_millis;
 
 int8_t kitchen_timer_set_time_index;
 const uint16_t timeDialDiscreteSeconds[] = {
@@ -432,7 +437,7 @@ void cycleBrightness(bool init)
     }
     ledDisplay.setBrightness(get_brightness_index_to_uSeconds_delay(brightness_index), false);
 #ifdef ENABLE_SERIAL
-    Serial.println(get_brightness_index_to_uSeconds_delay(brightness_index));
+    // Serial.println(get_brightness_index_to_uSeconds_delay(brightness_index));
 
 #endif
 }
@@ -690,7 +695,7 @@ void set_time(Time_type t)
 void display_time_state_refresh()
 {
 
-    if (millis() - displayUpdateDelayStartMillis > TIME_UPDATE_DELAY) // https://arduino.stackexchange.com/questions/12587/how-can-i-handle-the-millis-rollover
+    if (millis() - displayUpdateDelayStartMillis > DISPLAY_TIME_UPDATE_DELAY) // https://arduino.stackexchange.com/questions/12587/how-can-i-handle-the-millis-rollover
     {
         displayUpdateDelayStartMillis = millis();
 
@@ -1467,12 +1472,12 @@ void kitchen_timer_state_refresh()
     // }
     // state_mem_tmp = kitchen_timer_state;
 
-    if (millis() - watchdog_last_button_press_millis > DELAY_KITCHEN_TIMER_AUTO_ESCAPE_MILLIS)
-    {
+    // if (millis() - watchdog_last_button_press_millis > DELAY_KITCHEN_TIMER_AUTO_ESCAPE_MILLIS)
+    // {
 
-        if (kitchen_timer_state == state_stopped)
-            kitchen_timer_state = state_exit;
-    }
+    //     if (kitchen_timer_state == state_stopped)
+    //         kitchen_timer_state = state_exit;
+    // }
 
     switch (kitchen_timer_state)
     {
@@ -1482,36 +1487,27 @@ void kitchen_timer_state_refresh()
     {
         if (kitchenTimer.getIsStarted())
         {
-            kitchen_timer_state = state_running_refresh_display;
+            kitchen_timer_state = state_running;
         }
         else
         {
-            kitchen_timer_state = state_stopped_refresh_display;
+            kitchen_timer_state = state_stopped;
         }
     }
     break;
-    case (state_stopped_refresh_display):
-    {
 
-        char *disp;
-        disp = visualsManager.getDisplayTextBufHandle();
-        if (((millis() - blink_offset) % 1000) < 500)
-        {
-            kitchenTimer.getTimeString(disp);
-        }
-        else
-        {
-            disp[0] = ' ';
-            visualsManager.blanksToBuf(disp);
-        }
-        divider_colon_to_display(true);
-        kitchen_timer_state = state_stopped;
-    }
-    break;
     case (state_stopped):
     {
+        bool update_disp = false;
+        if (button_up.isPressedEdge() || button_down.isPressedEdge() || button_up.getLongPressPeriodicalEdge() || button_down.getLongPressPeriodicalEdge())
+        {
+            nextStep(&kitchen_timer_set_time_index, button_up.isPressed(), 0, 90, false);
+            kitchenTimer.setInitCountDownTimeSecs(timeDialDiscreteSeconds[kitchen_timer_set_time_index]);
+
+            update_disp = true;
+            set_blink_offset();
+        }
         if (button_kitchen_timer.isPressedEdge() || ((button_kitchen_timer.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_kitchen_timer.getLongPressPeriodicalEdge()))
-        // if (button_kitchen_timer.isPressedEdge() )
         {
             button_kitchen_timer.setLongPressCount(666); // effectively disable more long press detections. This fixes the start/stop bug (because it still detects a long press from when it was started/stopped if activated with a normal edge.)
             kitchen_timer_state = state_running;
@@ -1519,15 +1515,16 @@ void kitchen_timer_state_refresh()
             buzzer.addNoteToNotesBuffer(G6_4);
             eeprom_write_byte_if_changed(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX, kitchen_timer_set_time_index);
         }
+
         if (millis() - nextKitchenBlinkUpdateMillis > TIME_HALF_BLINK_PERIOD_MILLIS)
         {
             nextKitchenBlinkUpdateMillis = TIME_HALF_BLINK_PERIOD_MILLIS;
-            kitchen_timer_state = state_stopped_refresh_display;
+            update_disp = true;
         }
 
         if (kitchenTimer.getIsStarted())
         {
-            kitchen_timer_state = state_running_refresh_display;
+            kitchen_timer_state = state_running;
         }
 
         if (button_alarm.isPressedEdge())
@@ -1535,20 +1532,29 @@ void kitchen_timer_state_refresh()
             kitchen_timer_state = state_exit;
         }
 
-        if (button_up.isPressedEdge() || button_down.isPressedEdge() || button_up.getLongPressPeriodicalEdge() || button_down.getLongPressPeriodicalEdge())
+        if (update_disp)
         {
-            nextStep(&kitchen_timer_set_time_index, button_up.isPressed(), 0, 90, false);
-            kitchenTimer.setInitCountDownTimeSecs(timeDialDiscreteSeconds[kitchen_timer_set_time_index]);
-            kitchen_timer_state = state_stopped_refresh_display;
-            set_blink_offset();
+            char *disp;
+            disp = visualsManager.getDisplayTextBufHandle();
+            if (((millis() - blink_offset) % 1000) < 500)
+            {
+                kitchenTimer.getTimeString(disp);
+            }
+            else
+            {
+                disp[0] = ' ';
+                visualsManager.blanksToBuf(disp);
+            }
+            divider_colon_to_display(true);
         }
     }
     break;
     case (state_running):
     {
+        bool update_disp = false;
         if (kitchenTimer.getEdgeSinceLastCallFirstGivenHundredsPartOfSecond(500, true, true))
         {
-            kitchen_timer_state = state_running_refresh_display;
+            update_disp = true;
         }
         else if (button_alarm.isPressedEdge())
         {
@@ -1558,26 +1564,25 @@ void kitchen_timer_state_refresh()
         {
             button_kitchen_timer.setLongPressCount(666); // effectively disable more long press detections. This fixes the start/stop bug (because it still detects a long press from when it was started/stopped if activated with a normal edge.)
             kitchenTimer.reset();
-            kitchen_timer_state = state_stopped_refresh_display;
+            kitchen_timer_state = state_stopped;
             buzzer.addNoteToNotesBuffer(C6_4);
         }
         else if (button_up.isPressedEdge() || button_down.isPressedEdge())
         {
             kitchenTimer.setOffsetInitTimeMillis((1 - 2 * button_down.isPressed()) * 60000);
-            kitchen_timer_state = state_running_refresh_display;
+            update_disp = true;
+        }
+
+        if (update_disp)
+        {
+            char *disp;
+            disp = visualsManager.getDisplayTextBufHandle();
+            kitchenTimer.getTimeString(disp);
+            divider_colon_to_display(kitchenTimer.getInFirstGivenHundredsPartOfSecond(500));
         }
     }
     break;
-    case (state_running_refresh_display):
-    {
-        char *disp;
-        disp = visualsManager.getDisplayTextBufHandle();
-        kitchenTimer.getTimeString(disp);
-        divider_colon_to_display(kitchenTimer.getInFirstGivenHundredsPartOfSecond(500));
 
-        kitchen_timer_state = state_running;
-    }
-    break;
     case (state_exit):
     {
 
@@ -1713,17 +1718,126 @@ void checkHourlyBeep()
         {
             buzzer.addNoteToNotesBuffer(E8_8);
         }
+        // #ifdef ENABLE_SERIAL
+        //         Serial.println("efiefefeeee");
+        //         Serial.println(minute_now);
+        //         Serial.println(hourly_beep_done_memory);
+        //         Serial.println("******");
+        // #endif
     }
 
     hourly_beep_done_memory = (minute_now == 0);
 }
 
+void millisToTime(unsigned long *millis, uint8_t *hour, uint8_t *minute, uint8_t *second, bool *AmElsePm, bool is12HourFormat)
+{
+    int hourOfDay = *millis / 3600000 % 24; // convert millis to hour of day
+    if (is12HourFormat)
+    {
+        if (hourOfDay == 0)
+        {
+            *hour = 12;
+        }
+        else if (hourOfDay > 12)
+        {
+            *hour = hourOfDay - 12;
+        }
+        else
+        {
+            *hour = hourOfDay;
+        }
+    }
+    else
+    {
+        *hour = hourOfDay;
+    }
+    *minute = *millis / 60000 % 60; // convert millis to minute
+    *second = *millis / 1000 % 60;  // convert millis to second
+
+    if (is12HourFormat)
+    {
+        if (hourOfDay >= 12)
+        {
+            *AmElsePm = false;
+        }
+        else
+        {
+            *AmElsePm = true;
+        }
+    }
+}
+
+unsigned long timeToMillis(uint8_t hour, uint8_t minute, uint8_t second, bool is12HourFormat, bool isPM)
+{
+    unsigned long millis = 0;
+
+    if (is12HourFormat)
+    {
+        if (hour == 12)
+        {
+            hour = 0;
+        }
+        if (isPM)
+        {
+            hour += 12;
+        }
+    }
+
+    millis += hour * 3600000; // convert hour to millis
+    millis += minute * 60000; // convert minute to millis
+    millis += second * 1000;  // convert second to millis
+
+    return millis;
+}
+
 void updateTimeNow()
 {
+
+#ifdef MINIMAL_RTC_INTERACTION
+    // unsigned long m = millis();
+
     if (millis() - updateTimeDelayStartMillis > TIME_UPDATE_DELAY)
     {
+
+        // #ifdef ENABLE_SERIAL
+        //         Serial.println( time_as_millis );
+        //         Serial.println((millis() - updateTimeDelayStartMillis));
+        //         Serial.println("+++");
+
+        // #endif
+
         updateTimeDelayStartMillis = millis();
 
+        bool is_h12;
+        bool is_PM_time;
+        byte hour = rtcDS3231.getHour(is_h12, is_PM_time);
+        byte minute = rtcDS3231.getMinute();
+        byte second = rtcDS3231.getSecond();
+        rtc_chip_time_millis = timeToMillis(hour, minute, second, is_h12, is_PM_time);
+
+        time_as_millis = rtc_chip_time_millis;
+
+        // #ifdef ENABLE_SERIAL
+        //         Serial.println(hour);
+        //         Serial.println(minute);
+        //         Serial.println(second);
+        //         Serial.println(time_as_millis);
+
+        // #endif
+    }
+    else
+    {
+        time_as_millis = rtc_chip_time_millis + (millis() - updateTimeDelayStartMillis);
+        // time_as_millis = millis();
+    }
+
+    millisToTime(&time_as_millis, &hour_now, &minute_now, &second_now, &amElsePm_now, false);
+
+#else
+    if (millis() - updateTimeDelayStartMillis > TIME_UPDATE_DELAY)
+    {
+
+        updateTimeDelayStartMillis = millis();
 // limit calls to peripheral by only loading time periodically
 #ifdef PROTOTYPE_GRAVITY_RTC
 
@@ -1739,8 +1853,8 @@ void updateTimeNow()
         second_now = rtcDS3231.getSecond();
 
 #endif
-        // Serial.println(second_now);
     }
+#endif
 }
 
 void measure_cycle_time()
@@ -1759,7 +1873,7 @@ void measure_cycle_time()
         float average;
         average = 1.0 * (float)(sum) / CYCLE_TIMES_WINDOW_SIZE;
 #ifdef ENABLE_SERIAL
-        Serial.println(average);
+        // Serial.println(average);
 #endif
         // Serial.println("********************");
     }
@@ -1807,7 +1921,6 @@ void main_application_loop()
     ledDisplay.refresh();
     visualsManager.refresh();
     ledDisplay.refresh();
-    // delay(DELAY_TO_REDUCE_LIGHT_FLICKER_MILLIS);
 }
 
 // ****DS3231 test****
