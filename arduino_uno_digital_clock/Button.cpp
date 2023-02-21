@@ -48,7 +48,6 @@ void Button::setLongPressCount(uint16_t fakeLongPressCountPeriods)
 bool Button::getLongPressPeriodicalEdge()
 {
 
-
     //   bool edge_detected;
     //   edge_detected = long_press_edge_detected;
     //   long_press_edge_detected = false;
@@ -76,8 +75,8 @@ void Button::refresh()
         setValue(val);
         is_debounced = true;
         // #ifdef ENABLE_SERIAL
-                Serial.println("bb");
-// #endif
+        // Serial.println("bb");
+        // #endif
 
         longPressStartMillis = millis();
         longPressPeriodicalStartMillis = millis();
@@ -112,9 +111,9 @@ void Button::refresh()
                 long_press_edge_detected = true;
                 longPressEdgeCount++;
                 longPressPeriodicalStartMillis = millis();
-// #ifdef ENABLE_SERIAL
-                Serial.println("LOONG");
-// #endif
+                // #ifdef ENABLE_SERIAL
+                // Serial.println("LOONG");
+                // #endif
             }
             else
             {

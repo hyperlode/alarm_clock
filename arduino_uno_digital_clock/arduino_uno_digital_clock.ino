@@ -1,5 +1,5 @@
 
-#define ENABLE_SERIAL
+// #define ENABLE_SERIAL
 // #define ENABLE_MEASURE_CYCLE_TIME
 // #define PROTOTYPE_BIG_BOX
 // #define PROTOTYPE_GRAVITY_RTC
@@ -2061,7 +2061,7 @@ void setup()
     alarm_set_state = state_alarm_init;
 
     kitchenTimer.setInitCountDownTimeSecs(timeDialDiscreteSeconds[kitchen_timer_set_time_index]);
-    // kitchen_timer_state = state_stopped_refresh_display;
+    kitchen_timer_state = state_stopped;
     blink_offset = 0;
 
 // #define ALARM_DEBUG
