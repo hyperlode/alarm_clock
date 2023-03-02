@@ -3,7 +3,7 @@
 // #define ENABLE_MEASURE_CYCLE_TIME
 // #define PROTOTYPE_BIG_BOX
 // #define PROTOTYPE_GRAVITY_RTC
-// #define MINIMAL_RTC_INTERACTION
+#define MINIMAL_RTC_INTERACTION
 
 #ifdef PROTOTYPE_GRAVITY_RTC
 #include "GravityRtc.h"
@@ -105,7 +105,7 @@
 #define button_kitchen_timer button_1
 #define button_alarm button_0
 
-#define TIME_UPDATE_DELAY 1000
+#define TIME_UPDATE_DELAY 60500
 #define DISPLAY_TIME_UPDATE_DELAY 1000
 #define DOT_UPDATE_DELAY 250
 #define TIME_HALF_BLINK_PERIOD_MILLIS 250
@@ -390,8 +390,7 @@ uint16_t get_brightness_index_to_uSeconds_delay(uint8_t index)
 #if (BRIGHTNESS_LEVELS == 4)
     uint8_t brightness_settings[] = {0, 1, 10, 80, 254}; // do not use 255, it creates an after glow once enabled. (TODO: why?!) zero is dark. but, maybe you want that... e.g. alarm active without display showing.
 #elif (BRIGHTNESS_LEVELS == 3)
-    // uint16_t brightness_settings[] = {100, 300, 100, 0};
-    uint16_t brightness_settings[] = {100, 18000, 4000, 0}; // useconds all off time (between lit up leds)
+    uint16_t brightness_settings[] = {100, 18000, 4000, 0}; // (element0: doesn't matter). useconds all off time (between lit up leds)
 
 #endif
     return brightness_settings[index];
@@ -620,12 +619,14 @@ void set_time(Time_type t)
             second_now = rtc.second;
         }
         rtc.adjustRtc(rtc.year, rtc.month, rtc.day, rtc.week, rtc.hour, rtc.minute, rtc.second);
+        updateTimeNow(true);
 #else
 
         if (t == hours)
         {
             nextStepRotate(&hour_now, button_up.isPressed(), 0, 23);
             rtcDS3231.setHour(hour_now);
+            updateTimeNow(true);
 
             blinkUpdateDelayStartMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
             blinker = true;
@@ -633,8 +634,15 @@ void set_time(Time_type t)
         }
         else if (t == minutes)
         {
+            // Serial.println("----");
+            // Serial.println(minute_now);
             nextStepRotate(&minute_now, button_up.isPressed(), 0, 59);
+            // Serial.println(minute_now);
             rtcDS3231.setMinute(minute_now);
+            updateTimeNow(true);
+            // Serial.println(minute_now);
+            // Serial.println("====");
+
             blinkUpdateDelayStartMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
             blinker = true;
             hour_minutes_to_display();
@@ -642,6 +650,7 @@ void set_time(Time_type t)
         else if (t == seconds)
         {
             rtcDS3231.setSecond(0);
+            updateTimeNow(true);
             second_now = rtcDS3231.getSecond();
 
             blinkUpdateDelayStartMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
@@ -1783,20 +1792,20 @@ unsigned long timeToMillis(uint8_t hour, uint8_t minute, uint8_t second, bool is
         }
     }
 
-    millis += hour * 3600000; // convert hour to millis
-    millis += minute * 60000; // convert minute to millis
-    millis += second * 1000;  // convert second to millis
+    millis += (unsigned long)hour * 3600000; // convert hour to millis
+    millis += (unsigned long)minute * 60000; // convert minute to millis
+    millis += (unsigned long)second * 1000;  // convert second to millis
 
     return millis;
 }
 
-void updateTimeNow()
+void updateTimeNow(bool force_update)
 {
 
 #ifdef MINIMAL_RTC_INTERACTION
     // unsigned long m = millis();
 
-    if (millis() - updateTimeDelayStartMillis > TIME_UPDATE_DELAY)
+    if (millis() - updateTimeDelayStartMillis > TIME_UPDATE_DELAY || force_update)
     {
 
         // #ifdef ENABLE_SERIAL
@@ -1805,16 +1814,27 @@ void updateTimeNow()
         //         Serial.println("+++");
 
         // #endif
-
         updateTimeDelayStartMillis = millis();
 
         bool is_h12;
         bool is_PM_time;
         byte hour = rtcDS3231.getHour(is_h12, is_PM_time);
         byte minute = rtcDS3231.getMinute();
+        // Serial.println("++++++");
         byte second = rtcDS3231.getSecond();
+        is_h12 = false;
+        // Serial.println(hour);
+        // Serial.println(minute);
+        // Serial.println(second);
         rtc_chip_time_millis = timeToMillis(hour, minute, second, is_h12, is_PM_time);
 
+        hour_now = hour;
+        minute_now = minute;
+
+        // Serial.println(rtc_chip_time_millis);
+
+        // Serial.println("endudpate");
+        second_now = second;
         time_as_millis = rtc_chip_time_millis;
 
         // #ifdef ENABLE_SERIAL
@@ -1827,8 +1847,14 @@ void updateTimeNow()
     }
     else
     {
+        // unsigned long memtest = time_as_millis;
         time_as_millis = rtc_chip_time_millis + (millis() - updateTimeDelayStartMillis);
         // time_as_millis = millis();
+
+        // if (memtest > time_as_millis)
+        // {
+        //     Serial.println(time_as_millis);
+        // }
     }
 
     millisToTime(&time_as_millis, &hour_now, &minute_now, &second_now, &amElsePm_now, false);
@@ -1901,7 +1927,7 @@ void main_application_loop()
     ledDisplay.refresh();
 
     // process
-    updateTimeNow();
+    updateTimeNow(false);
     ledDisplay.refresh();
     checkWatchDog();
     ledDisplay.refresh();
@@ -2087,6 +2113,7 @@ void setup()
 //     Serial.println(test[i]);
 //   }
 #endif
+    updateTimeNow(true);
 }
 
 void loop()
