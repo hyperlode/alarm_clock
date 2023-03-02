@@ -34,6 +34,7 @@
 #define FACTORY_DEFAULT_ALARM_IS_SNOOZING 0
 #define FACTORY_DEFAULT_ALARM_ENABLE_SNOOZE_TIME_DECREASE 0
 #define FACTORY_DEFAULT_ALARM_TUNE 0
+#define FACTORY_DEFAULT_ENABLE_RTC_CHIP 1
 
 #define EEPROM_ADDRESS_EEPROM_VALID 0                      // 1 byte
 #define EEPROM_ADDRESS_ALARM_HOUR 1                        // 1 byte
@@ -45,6 +46,7 @@
 #define EEPROM_ADDRESS_ALARM_IS_SNOOZING 7                 // 1 byte
 #define EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE 8 // 1 byte
 #define EEPROM_ADDRESS_ALARM_TUNE 9                        // 1 byte
+#define EEPROM_ADDRESS_ENABLE_RTC_CHIP 10                        // 1 byte
 
 #define PIN_DUMMY 66
 #define PIN_DUMMY_2 22 // randomly chosen. I've had it set to 67, and at some point, multiple segments were lit up. This STILL is C hey, it's gonna chug on forever!
@@ -168,6 +170,7 @@ uint8_t brightness_index;
 bool blinker;
 bool hourly_beep_enabled;
 bool enable_snooze_time_decrease;
+bool enable_rtc_chip;
 
 int8_t time_set_index_helper;
 uint8_t hour_now;
@@ -194,18 +197,20 @@ uint8_t main_menu_item_index;
 bool main_menu_display_update;
 char main_menu_text_buf[4];
 
-#define MENU_MENU_ITEMS_COUNT 5
+#define MENU_MENU_ITEMS_COUNT 6
 const byte menu_item_titles[] PROGMEM = {
     'T', 'S', 'E', 'T',
     'S', 'N', 'O', 'O',
     'B', 'E', 'E', 'P',
     'D', 'E', 'C', 'R',
-    'T', 'U', 'N', 'E'};
+    'T', 'U', 'N', 'E',
+    'R', 'T', 'C', ' '};
 #define MAIN_MENU_ITEM_TIME_SET 0
 #define MAIN_MENU_ITEM_SNOOZE_TIME 1
 #define MAIN_MENU_ITEM_ENABLE_HOURLY_BEEP 2
 #define MAIN_MENU_ITEM_ENABLE_SNOOZE_TIME_DECREASE 3
 #define MAIN_MENU_ITEM_TUNE 4
+#define MAIN_MENU_ITEM_ENABLE_RTC 5
 
 #define TUNES_COUNT 6
 
@@ -829,6 +834,11 @@ void main_menu_state_refresh()
 
                 visualsManager.setTextBufToDisplay(tune_name_buf);
             }
+            case (MAIN_MENU_ITEM_ENABLE_RTC):
+            {
+
+                visualsManager.setBoolToDisplay(enable_rtc_chip);
+            }
             break;
             case (MAIN_MENU_ITEM_ENABLE_SNOOZE_TIME_DECREASE):
             {
@@ -857,6 +867,7 @@ void main_menu_state_refresh()
         eeprom_write_byte_if_changed(EEPROM_ADDRESS_SNOOZE_TIME_MINUTES, alarm_snooze_duration_minutes);
         eeprom_write_byte_if_changed(EEPROM_ADDRESS_HOURLY_BEEP_ENABLED, hourly_beep_enabled);
         eeprom_write_byte_if_changed(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE, enable_snooze_time_decrease);
+        eeprom_write_byte_if_changed(EEPROM_ADDRESS_ENABLE_RTC_CHIP, enable_rtc_chip);
         eeprom_write_byte_if_changed(EEPROM_ADDRESS_ALARM_TUNE, alarm_tune_index);
     }
     break;
@@ -945,6 +956,19 @@ void main_menu_state_refresh()
             // if (button_up.isPressedEdge() || button_down.isPressedEdge() || button_enter.isPressedEdge())
             {
                 hourly_beep_enabled = !hourly_beep_enabled;
+            }
+        }
+        break;
+        case (MAIN_MENU_ITEM_ENABLE_RTC):
+        {
+            visualsManager.setBoolToDisplay(enable_rtc_chip);
+            if (button_enter.isPressedEdge())
+            {
+                main_menu_state = state_main_menu_save_and_back_to_menu;
+            }
+            if (button_up.isPressedEdge() || button_down.isPressedEdge())
+            {
+                enable_rtc_chip = !enable_rtc_chip;
             }
         }
         break;
@@ -2043,6 +2067,7 @@ void setup()
         EEPROM.write(EEPROM_ADDRESS_ALARM_IS_SNOOZING, FACTORY_DEFAULT_ALARM_IS_SNOOZING);
         EEPROM.write(EEPROM_ADDRESS_ALARM_ENABLE_SNOOZE_TIME_DECREASE, FACTORY_DEFAULT_ALARM_ENABLE_SNOOZE_TIME_DECREASE);
         EEPROM.write(EEPROM_ADDRESS_ALARM_TUNE, FACTORY_DEFAULT_ALARM_TUNE);
+        EEPROM.write(EEPROM_ADDRESS_ENABLE_RTC_CHIP, FACTORY_DEFAULT_ENABLE_RTC_CHIP);
         buzzer.addNoteToNotesBuffer(C5_1);
         buzzer.addNoteToNotesBuffer(D5_2);
         buzzer.addNoteToNotesBuffer(E5_4);
@@ -2059,6 +2084,7 @@ void setup()
     uint8_t is_snoozing = EEPROM.read(EEPROM_ADDRESS_ALARM_IS_SNOOZING);
     uint8_t alarm_enabled = EEPROM.read(EEPROM_ADDRESS_ALARM_SET_MEMORY);
     alarm_tune_index = EEPROM.read(EEPROM_ADDRESS_ALARM_TUNE);
+    enable_rtc_chip = EEPROM.read(EEPROM_ADDRESS_ENABLE_RTC_CHIP);
     for (uint8_t i = 0; i < 4; i++)
     {
         tune_name_buf[i] = pgm_read_byte_near(menu_item_tune_names + 4 * alarm_tune_index + i);
