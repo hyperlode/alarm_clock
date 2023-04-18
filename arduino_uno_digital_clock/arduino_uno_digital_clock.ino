@@ -1,5 +1,5 @@
 
-// #define ENABLE_SERIAL
+#define ENABLE_SERIAL
 // #define ENABLE_MEASURE_CYCLE_TIME
 // #define PROTOTYPE_BIG_BOX
 // #define PROTOTYPE_GRAVITY_RTC
@@ -606,7 +606,7 @@ void set_time(Time_type t)
 
             if (t == hours)
             {
-                nextStepRotate(&rtc.hour, button_up.isPressed(), 0, 23);
+                nextStepRotate(reinterpret_cast<int8_t*>(&rtc.hour), button_up.isPressed(), 0, 23);
                 blinkUpdateDelayStartMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
                 blinker = true;
                 hour_minutes_to_display();
@@ -614,7 +614,7 @@ void set_time(Time_type t)
             }
             else if (t == minutes)
             {
-                nextStepRotate(&rtc.minute, button_up.isPressed(), 0, 59);
+                nextStepRotate(reinterpret_cast<int8_t*>(&rtc.minute), button_up.isPressed(), 0, 59);
                 blinkUpdateDelayStartMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
                 blinker = true;
                 hour_minutes_to_display();
@@ -634,7 +634,7 @@ void set_time(Time_type t)
 
             if (t == hours)
             {
-                nextStepRotate(&hour_now, button_up.isPressed(), 0, 23);
+                nextStepRotate(reinterpret_cast<int8_t*>(&hour_now), button_up.isPressed(), 0, 23);
                 rtcDS3231.setHour(hour_now);
                 updateTimeNow(true);
 
@@ -646,7 +646,7 @@ void set_time(Time_type t)
             {
                 // Serial.println("----");
                 // Serial.println(minute_now);
-                nextStepRotate(&minute_now, button_up.isPressed(), 0, 59);
+                nextStepRotate(reinterpret_cast<int8_t*>(&minute_now), button_up.isPressed(), 0, 59);
                 // Serial.println(minute_now);
                 rtcDS3231.setMinute(minute_now);
                 updateTimeNow(true);
@@ -845,7 +845,7 @@ void main_menu_state_refresh()
                 main_menu_state = state_main_menu_exit;
             }
 
-            nextStepRotate(&main_menu_item_index, button_up.isPressed(), 0, MENU_MENU_ITEMS_COUNT - 1);
+            nextStepRotate(reinterpret_cast<int8_t*>(&main_menu_item_index), button_up.isPressed(), 0, MENU_MENU_ITEMS_COUNT - 1);
 
             main_menu_display_update = true;
             set_blink_offset();
@@ -1201,7 +1201,7 @@ void alarm_set_state_refresh()
     {
         if (button_up.isPressedEdge() || button_down.isPressedEdge() || button_up.getLongPressPeriodicalEdge() || button_down.getLongPressPeriodicalEdge())
         {
-            nextStepRotate(&alarm_hour, button_up.isPressed(), 0, 23);
+            nextStepRotate(reinterpret_cast<int8_t*>(&alarm_hour), button_up.isPressed(), 0, 23);
             blinkUpdateDelayStartMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
             blinker = true;
         }
@@ -1228,7 +1228,7 @@ void alarm_set_state_refresh()
     {
         if (button_up.isPressedEdge() || button_down.isPressedEdge() || button_up.getLongPressPeriodicalEdge() || button_down.getLongPressPeriodicalEdge())
         {
-            nextStepRotate(&alarm_minute, button_up.isPressed(), 0, 59);
+            nextStepRotate(reinterpret_cast<int8_t*>(&alarm_minute), button_up.isPressed(), 0, 59);
             display_alarm();
             blinkUpdateDelayStartMillis -= TIME_HALF_BLINK_PERIOD_MILLIS;
             blinker = true;
