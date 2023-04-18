@@ -1,5 +1,5 @@
 
-#define ENABLE_SERIAL
+// #define ENABLE_SERIAL
 // #define ENABLE_MEASURE_CYCLE_TIME
 // #define PROTOTYPE_BIG_BOX
 // #define PROTOTYPE_GRAVITY_RTC
@@ -1243,9 +1243,9 @@ void alarm_set_state_refresh()
         if (button_alarm.isPressedEdge())
         {
             display_alarm();
-            // alarm_set_state = state_alarm_display;
             alarm_set_state = state_alarm_end;
         }
+
         if (millis() - blinkUpdateDelayStartMillis > TIME_HALF_BLINK_PERIOD_MILLIS)
         {
             blinkUpdateDelayStartMillis = millis();
