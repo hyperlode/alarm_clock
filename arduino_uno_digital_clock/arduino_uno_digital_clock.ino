@@ -113,12 +113,12 @@
 #define DOT_UPDATE_DELAY 250
 #define TIME_HALF_BLINK_PERIOD_MILLIS 250
 #define DELAY_ALARM_AUTO_ESCAPE_MILLIS 5000
-#define DELAY_KITCHEN_TIMER_AUTO_ESCAPE_MILLIS 5000
+#define DELAY_KITCHEN_TIMER_AUTO_ESCAPE_MILLIS 15000  // will only go out of menu if timer is not ticking
 #define MAIN_MENU_DISPLAY_ITEMS_AUTO_ESCAPE_MILLIS 8000
 #define MAIN_MENU_MODIFY_ITEMS_AUTO_ESCAPE_MILLIS 4000
 #define ALARM_USER_STOP_BUTTON_PRESS_MILLIS 1000
 #define KITCHEN_TIMER_ENDED_PERIODICAL_BEEP_SECONDS 60
-#define PERIODICAL_EDGES_DELAY 2 // used to delay long press time. 0 = first long press period occurence, e.g. 5  = 5 long press periods delay
+#define PERIODICAL_EDGES_DELAY 3 // used to delay long press time. 0 = first long press period occurence, e.g. 5  = 5 long press periods delay
 
 DisplayManagement visualsManager;
 LedMultiplexer5x8 ledDisplay;
@@ -146,6 +146,8 @@ long blinkUpdateDelayStartMillis;
 long nextKitchenBlinkUpdateMillis;
 long displayUpdateDelayStartMillis;
 long blink_offset;
+
+bool armedToExit; // hack to make sure there is no unexpected exit at state change
 
 bool display_dot_status_memory;
 
@@ -1556,12 +1558,12 @@ void kitchen_timer_state_refresh()
     // }
     // state_mem_tmp = kitchen_timer_state;
 
-    // if (millis() - watchdog_last_button_press_millis > DELAY_KITCHEN_TIMER_AUTO_ESCAPE_MILLIS)
-    // {
-
-    //     if (kitchen_timer_state == state_stopped)
-    //         kitchen_timer_state = state_exit;
-    // }
+    if (millis() - watchdog_last_button_press_millis > DELAY_KITCHEN_TIMER_AUTO_ESCAPE_MILLIS)
+    {
+        if (kitchen_timer_state == state_stopped){
+            kitchen_timer_state = state_exit;
+        }
+    }
 
     switch (kitchen_timer_state)
     {
@@ -1591,13 +1593,14 @@ void kitchen_timer_state_refresh()
             update_disp = true;
             set_blink_offset();
         }
-        if (button_kitchen_timer.isPressedEdge() || ((button_kitchen_timer.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_kitchen_timer.getLongPressPeriodicalEdge()))
+        if (button_alarm.isPressedEdge() || ((button_kitchen_timer.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_kitchen_timer.getLongPressPeriodicalEdge()))
         {
-            button_kitchen_timer.setLongPressCount(666); // effectively disable more long press detections. This fixes the start/stop bug (because it still detects a long press from when it was started/stopped if activated with a normal edge.)
+            //button_kitchen_timer.setLongPressCount(666); // effectively disable more long press detections. This fixes the start/stop bug (because it still detects a long press from when it was started/stopped if activated with a normal edge.)
             kitchen_timer_state = state_running;
             kitchenTimer.start();
             buzzer.addNoteToNotesBuffer(G6_4);
             eeprom_write_byte_if_changed(EEPROM_ADDRESS_KITCHEN_TIMER_INIT_INDEX, kitchen_timer_set_time_index);
+            armedToExit = false;
         }
 
         if (millis() - nextKitchenBlinkUpdateMillis > TIME_HALF_BLINK_PERIOD_MILLIS)
@@ -1611,9 +1614,17 @@ void kitchen_timer_state_refresh()
             kitchen_timer_state = state_running;
         }
 
-        if (button_alarm.isPressedEdge())
+        if (button_kitchen_timer.isPressedEdge()){
+            armedToExit = true;
+        }
+
+        if (button_kitchen_timer.isUnpressedEdge() )
         {
+            if(armedToExit){
             kitchen_timer_state = state_exit;
+            }
+
+            armedToExit = false;
         }
 
         if (update_disp)
@@ -1640,16 +1651,24 @@ void kitchen_timer_state_refresh()
         {
             update_disp = true;
         }
-        else if (button_alarm.isPressedEdge())
+        else if (button_kitchen_timer.isPressedEdge())
         {
-            main_state = state_display_time;
+            armedToExit = true;
         }
-        else if (button_kitchen_timer.isPressedEdge() || ((button_kitchen_timer.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_kitchen_timer.getLongPressPeriodicalEdge()))
+        else if (button_kitchen_timer.isUnpressedEdge() && armedToExit)
         {
-            button_kitchen_timer.setLongPressCount(666); // effectively disable more long press detections. This fixes the start/stop bug (because it still detects a long press from when it was started/stopped if activated with a normal edge.)
+            if(armedToExit){
+            kitchen_timer_state = state_exit;
+            }
+            armedToExit = false;
+        }
+        else if (button_alarm.isPressedEdge() || ((button_kitchen_timer.getLongPressCount() == PERIODICAL_EDGES_DELAY) && button_kitchen_timer.getLongPressPeriodicalEdge()))
+        {
+            // button_kitchen_timer.setLongPressCount(666); // effectively disable more long press detections. This fixes the start/stop bug (because it still detects a long press from when it was started/stopped if activated with a normal edge.)
             kitchenTimer.reset();
             kitchen_timer_state = state_stopped;
             buzzer.addNoteToNotesBuffer(C6_4);
+            armedToExit = false;
         }
         else if (button_up.isPressedEdge() || button_down.isPressedEdge())
         {
@@ -1669,8 +1688,8 @@ void kitchen_timer_state_refresh()
 
     case (state_exit):
     {
-
         main_state = state_display_time;
+        armedToExit = false;
     }
     break;
 
